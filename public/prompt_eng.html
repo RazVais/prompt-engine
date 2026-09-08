@@ -87,16 +87,19 @@ tailwind.config = {
 <body class="antialiased min-h-screen pb-12">
 
 <!-- RV-DATA Watermark -->
-<div class="fixed top-4 left-4 z-50 bg-slate-900/60 backdrop-blur-md border border-brand-primary/30 text-brand-primary font-black px-4 py-1.5 rounded-full text-xs tracking-[0.2em] shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+<div id="rvWatermark" class="fixed top-4 left-4 z-50 bg-slate-900/60 backdrop-blur-md border border-brand-primary/30 text-brand-primary font-black px-4 py-1.5 rounded-full text-xs tracking-[0.2em] shadow-[0_0_15px_rgba(6,182,212,0.2)]">
     RV-DATA
 </div>
+
+<!-- Language toggle -->
+<button id="langToggle" onclick="onLangToggle()" data-i18n-aria-label="lang.toggleAria" aria-label="Switch language" class="fixed top-4 right-4 z-50 bg-slate-900/60 backdrop-blur-md border border-brand-secondary/40 text-brand-secondary font-bold px-3 py-1.5 rounded-full text-xs tracking-widest shadow-[0_0_15px_rgba(139,92,246,0.2)] hover:bg-slate-800/80 transition">EN</button>
 
 <header class="pt-16 pb-12 px-4 text-center relative overflow-hidden">
     <div class="absolute inset-0 z-0 opacity-20" style="background-image: radial-gradient(circle at center, #8b5cf6 1px, transparent 1px); background-size: 24px 24px;"></div>
     <div class="relative z-10 max-w-5xl mx-auto">
         <div class="inline-block p-3 rounded-2xl bg-brand-secondary/20 text-brand-secondary text-4xl mb-4">🧠</div>
         <h1 class="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">Anthropic <span class="gradient-text">Skills & MCP</span></h1>
-        <p class="text-xl text-slate-400 max-w-3xl mx-auto">סביבת העבודה הרשמית ליצירת הרחבות (Plugins), שרתי הקשר (MCP) וכישורים (Skills) עבור Claude Code.</p>
+        <p class="text-xl text-slate-400 max-w-3xl mx-auto" data-i18n="header.subtitle">סביבת העבודה הרשמית ליצירת הרחבות (Plugins), שרתי הקשר (MCP) וכישורים (Skills) עבור Claude Code.</p>
     </div>
 </header>
 
@@ -106,24 +109,24 @@ tailwind.config = {
     <section id="settingsPanel" class="glass-card rounded-3xl p-6 shadow-2xl col-span-1 lg:col-span-3 border border-brand-primary/20">
         <div class="flex items-center mb-4">
             <span class="text-2xl mr-3">⚙️</span>
-            <h2 class="text-xl font-bold">הגדרות יצירה</h2>
+            <h2 class="text-xl font-bold" data-i18n="settings.title">הגדרות יצירה</h2>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="flex flex-col gap-1.5">
-                <label for="providerSelect" class="text-xs font-bold text-slate-400">ספק</label>
+                <label for="providerSelect" class="text-xs font-bold text-slate-400" data-i18n="settings.provider">ספק</label>
                 <select id="providerSelect" class="ai-input rounded-xl p-2.5 w-full text-sm"></select>
             </div>
             <div class="flex flex-col gap-1.5">
-                <label for="modelInput" class="text-xs font-bold text-slate-400">מודל</label>
+                <label for="modelInput" class="text-xs font-bold text-slate-400" data-i18n="settings.model">מודל</label>
                 <input id="modelInput" list="modelOptions" autocomplete="off" class="ai-input rounded-xl p-2.5 w-full text-sm">
                 <datalist id="modelOptions"></datalist>
             </div>
             <div id="tempControl" class="flex flex-col gap-1.5">
-                <label for="tempRange" class="text-xs font-bold text-slate-400">טמפרטורה <span id="tempReadout" class="text-brand-primary font-mono">0</span></label>
+                <label for="tempRange" class="text-xs font-bold text-slate-400"><span data-i18n="settings.temperature">טמפרטורה</span> <span id="tempReadout" class="text-brand-primary font-mono">0</span></label>
                 <input type="range" id="tempRange" min="0" max="2" step="0.1" value="0" class="w-full accent-brand-primary mt-2">
             </div>
             <div class="flex flex-col gap-1.5">
-                <label for="maxTokensInput" class="text-xs font-bold text-slate-400">אורך מקסימלי (טוקנים)</label>
+                <label for="maxTokensInput" class="text-xs font-bold text-slate-400" data-i18n="settings.maxTokens">אורך מקסימלי (טוקנים)</label>
                 <input type="number" id="maxTokensInput" class="ai-input rounded-xl p-2.5 w-full text-sm">
             </div>
         </div>
@@ -134,26 +137,26 @@ tailwind.config = {
     <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-3 border border-brand-secondary/30">
         <div class="flex items-center mb-6">
             <span class="text-3xl mr-3">🔌</span>
-            <h2 class="text-3xl font-bold">הארכיטקטורה החדשה: MCP ו-Skills</h2>
+            <h2 class="text-3xl font-bold" data-i18n="arch.title">הארכיטקטורה החדשה: MCP ו-Skills</h2>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-slate-800/80 p-6 rounded-2xl border-r-4 border-brand-primary">
                 <h3 class="text-xl font-bold text-white mb-2">Model Context Protocol (MCP)</h3>
-                <p class="text-slate-400 text-sm mb-4">תקן פתוח לחיבור Claude למקורות מידע וכלים חיצוניים. במקום לכתוב קוד אינטגרציה לכל API, אנו משתמשים בשרתי MCP מובנים המוגדרים בקובץ <code class="text-brand-primary">.mcp.json</code>.</p>
+                <p class="text-slate-400 text-sm mb-4" data-i18n-html="arch.mcp.desc">תקן פתוח לחיבור Claude למקורות מידע וכלים חיצוניים. במקום לכתוב קוד אינטגרציה לכל API, אנו משתמשים בשרתי MCP מובנים המוגדרים בקובץ <code class="text-brand-primary">.mcp.json</code>.</p>
                 <ul class="text-sm text-slate-300 space-y-2">
-                    <li>🔹 <strong>הגדרה:</strong> הוספה באמצעות <code class="bg-slate-900 px-1 rounded">claude mcp add</code>.</li>
-                    <li>🔹 <strong>דוגמאות:</strong> Fetcher, Playwright, Database, Filesystem.</li>
-                    <li>🔹 <strong>יעילות:</strong> נטען On-Demand כדי לחסוך טוקנים ב-Context Window.</li>
+                    <li data-i18n-html="arch.mcp.li1">🔹 <strong>הגדרה:</strong> הוספה באמצעות <code class="bg-slate-900 px-1 rounded">claude mcp add</code>.</li>
+                    <li data-i18n-html="arch.mcp.li2">🔹 <strong>דוגמאות:</strong> Fetcher, Playwright, Database, Filesystem.</li>
+                    <li data-i18n-html="arch.mcp.li3">🔹 <strong>יעילות:</strong> נטען On-Demand כדי לחסוך טוקנים ב-Context Window.</li>
                 </ul>
             </div>
             
             <div class="bg-slate-800/80 p-6 rounded-2xl border-r-4 border-brand-secondary">
                 <h3 class="text-xl font-bold text-white mb-2">Claude Skills (SKILL.md)</h3>
-                <p class="text-slate-400 text-sm mb-4">מודולים המעניקים ל-Claude ידע תהליכי (Procedural Knowledge). ממוקמים תחת <code class="text-brand-secondary">~/.claude/skills/</code> ומאפשרים ל-Claude לבצע משימות ספציפיות באופן עצמאי.</p>
+                <p class="text-slate-400 text-sm mb-4" data-i18n-html="arch.skills.desc">מודולים המעניקים ל-Claude ידע תהליכי (Procedural Knowledge). ממוקמים תחת <code class="text-brand-secondary">~/.claude/skills/</code> ומאפשרים ל-Claude לבצע משימות ספציפיות באופן עצמאי.</p>
                 <ul class="text-sm text-slate-300 space-y-2">
-                    <li>🔸 <strong>מבנה:</strong> דורש Frontmatter (שם ותיאור) כדי להיטען נכון.</li>
-                    <li>🔸 <strong>סגנון כתיבה:</strong> ציווי (Imperative) - "עשה X", "בדוק Y", לא "כדאי שתעשה".</li>
-                    <li>🔸 <strong>גילוי אוטומטי:</strong> Claude מחפש את התיאור וטוען את הכישרון כשהמשתמש מבקש.</li>
+                    <li data-i18n-html="arch.skills.li1">🔸 <strong>מבנה:</strong> דורש Frontmatter (שם ותיאור) כדי להיטען נכון.</li>
+                    <li data-i18n-html="arch.skills.li2">🔸 <strong>סגנון כתיבה:</strong> ציווי (Imperative) - "עשה X", "בדוק Y", לא "כדאי שתעשה".</li>
+                    <li data-i18n-html="arch.skills.li3">🔸 <strong>גילוי אוטומטי:</strong> Claude מחפש את התיאור וטוען את הכישרון כשהמשתמש מבקש.</li>
                 </ul>
             </div>
         </div>
@@ -163,22 +166,22 @@ tailwind.config = {
     <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-2 border border-brand-primary/20">
         <div class="flex items-center mb-6">
             <span class="text-3xl mr-3">🛠️</span>
-            <h2 class="text-3xl font-bold">מחולל מיומנויות (Skill Creator)</h2>
+            <h2 class="text-3xl font-bold" data-i18n="skillgen.title">מחולל מיומנויות (Skill Creator)</h2>
         </div>
         
         <div class="flex flex-col space-y-4">
-            <p class="text-sm text-slate-400">תאר את התהליך העסקי או האנליטי. המערכת תייצר עבורך קובץ <code>SKILL.md</code> תקני המשלב תגיות XML של Anthropic ודרישות שרתי MCP רלוונטיות לתחום.</p>
-            <textarea id="promptInput" class="ai-input rounded-xl p-4 w-full h-24 resize-none" placeholder="למשל: יצירת תוכנית אימונים לטריאתלון המבוססת על מדדי דופק שבועיים מקבצי אקסל..."></textarea>
+            <p class="text-sm text-slate-400" data-i18n-html="skillgen.desc">תאר את התהליך העסקי או האנליטי. המערכת תייצר עבורך קובץ <code>SKILL.md</code> תקני המשלב תגיות XML של Anthropic ודרישות שרתי MCP רלוונטיות לתחום.</p>
+            <textarea id="promptInput" class="ai-input rounded-xl p-4 w-full h-24 resize-none" data-i18n-placeholder="skillgen.placeholder" placeholder="למשל: יצירת תוכנית אימונים לטריאתלון המבוססת על מדדי דופק שבועיים מקבצי אקסל..."></textarea>
             
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button onclick="generateSkill()" id="skillBtn" class="bg-brand-secondary hover:bg-brand-secondary/80 text-white font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm">
-                    <span>📦 צור קובץ SKILL.md</span>
+                    <span data-i18n="skillgen.btnSkill">📦 צור קובץ SKILL.md</span>
                 </button>
                 <button onclick="generateSystemPrompt('standard')" id="sysPromptBtn" class="bg-brand-primary hover:bg-brand-primary/80 text-slate-900 font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm">
-                    <span>✨ פרומפט סוכן רגיל</span>
+                    <span data-i18n="skillgen.btnStandard">✨ פרומפט סוכן רגיל</span>
                 </button>
                 <button onclick="generateSystemPrompt('advanced')" id="sysPromptBtnAdv" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm">
-                    <span>🚀 חשיבה מעמיקה (CoT)</span>
+                    <span data-i18n="skillgen.btnAdvanced">🚀 חשיבה מעמיקה (CoT)</span>
                 </button>
             </div>
 
@@ -186,15 +189,15 @@ tailwind.config = {
                 <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                     <span id="outputTypeLabel" class="text-xs text-brand-primary font-bold uppercase tracking-widest">OUTPUT</span>
                     <div class="flex gap-2">
-                        <button onclick="copyToClipboard('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">העתק הכל</button>
-                        <button onclick="downloadPanel('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">הורד</button>
+                        <button onclick="copyToClipboard('promptOutput')" data-i18n="output.copyAll" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">העתק הכל</button>
+                        <button onclick="downloadPanel('promptOutput')" data-i18n="output.download" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">הורד</button>
                     </div>
                 </div>
                 <pre class="whitespace-pre-wrap text-slate-300"></pre>
                 <div class="usage-line hidden mt-3 text-[11px] text-slate-500 font-mono"></div>
                 <div class="refine-bar hidden mt-4 pt-3 border-t border-slate-700 flex gap-2 items-center">
-                    <input id="promptRefineInput" type="text" placeholder="תאר שינוי לביצוע…" class="ai-input rounded-lg p-2 flex-1 text-xs" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('promptOutput');}">
-                    <button id="promptRefineBtn" onclick="refinePanel('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
+                    <input id="promptRefineInput" type="text" data-i18n-placeholder="refine.placeholder" placeholder="תאר שינוי לביצוע…" class="ai-input rounded-lg p-2 flex-1 text-xs" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('promptOutput');}">
+                    <button id="promptRefineBtn" onclick="refinePanel('promptOutput')" data-i18n="refine.btn" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
                 </div>
             </div>
         </div>
@@ -204,23 +207,23 @@ tailwind.config = {
     <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1">
         <div class="flex items-center mb-6">
             <span class="text-3xl mr-3">🗂️</span>
-            <h2 class="text-2xl font-bold text-white">הגדרת פרויקט (CLAUDE.md)</h2>
+            <h2 class="text-2xl font-bold text-white" data-i18n="claudegen.title">הגדרת פרויקט (CLAUDE.md)</h2>
         </div>
-        <p class="text-slate-400 mb-4 text-sm leading-relaxed">הגדר כללים גלובליים לפרויקט, כולל שילובי MCP הנדרשים. קובץ זה יקשר בין ה-Skills שלך לסביבת הריצה ב-VS Code.</p>
-        <textarea id="claudeInput" class="ai-input rounded-xl p-4 w-full h-24 mb-4 resize-none" placeholder="טכנולוגיות וכללים: Python, GTFS, דרישה לשרת MCP של בסיס נתונים..."></textarea>
-        <button onclick="generateClaudeMd()" id="claudeBtn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition">
+        <p class="text-slate-400 mb-4 text-sm leading-relaxed" data-i18n="claudegen.desc">הגדר כללים גלובליים לפרויקט, כולל שילובי MCP הנדרשים. קובץ זה יקשר בין ה-Skills שלך לסביבת הריצה ב-VS Code.</p>
+        <textarea id="claudeInput" class="ai-input rounded-xl p-4 w-full h-24 mb-4 resize-none" data-i18n-placeholder="claudegen.placeholder" placeholder="טכנולוגיות וכללים: Python, GTFS, דרישה לשרת MCP של בסיס נתונים..."></textarea>
+        <button onclick="generateClaudeMd()" id="claudeBtn" data-i18n="claudegen.btn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition">
             ✨ הפק CLAUDE.md
         </button>
         <div id="claudeOutput" class="hidden mt-4 bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-xs font-mono overflow-auto max-h-64 relative group">
             <div class="absolute top-2 left-2 flex gap-2 z-10">
-                <button onclick="copyToClipboard('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">Copy</button>
-                <button onclick="downloadPanel('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">הורד</button>
+                <button onclick="copyToClipboard('claudeOutput')" data-i18n="output.copy" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">Copy</button>
+                <button onclick="downloadPanel('claudeOutput')" data-i18n="output.download" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">הורד</button>
             </div>
             <pre class="whitespace-pre-wrap text-green-400"></pre>
             <div class="usage-line hidden mt-2 text-[10px] text-slate-500 font-mono"></div>
             <div class="refine-bar hidden mt-3 pt-2 border-t border-slate-700 flex gap-2 items-center">
-                <input id="claudeRefineInput" type="text" placeholder="תאר שינוי לביצוע…" class="ai-input rounded p-1.5 flex-1 text-[10px]" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('claudeOutput');}">
-                <button id="claudeRefineBtn" onclick="refinePanel('claudeOutput')" class="bg-brand-primary/20 text-brand-primary text-[10px] px-2 py-1 rounded hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
+                <input id="claudeRefineInput" type="text" data-i18n-placeholder="refine.placeholder" placeholder="תאר שינוי לביצוע…" class="ai-input rounded p-1.5 flex-1 text-[10px]" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('claudeOutput');}">
+                <button id="claudeRefineBtn" onclick="refinePanel('claudeOutput')" data-i18n="refine.btn" class="bg-brand-primary/20 text-brand-primary text-[10px] px-2 py-1 rounded hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
             </div>
         </div>
     </section>
@@ -233,23 +236,23 @@ tailwind.config = {
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center">
                 <span class="text-3xl mr-3">🕓</span>
-                <h2 class="text-2xl font-bold">היסטוריית פרומפטים</h2>
+                <h2 class="text-2xl font-bold" data-i18n="history.title">היסטוריית פרומפטים</h2>
             </div>
             <div class="flex gap-2">
-                <button onclick="exportHistory()" class="bg-brand-primary/10 hover:bg-brand-primary/25 text-brand-primary text-xs font-bold px-4 py-2 rounded-xl transition border border-brand-primary/30">
+                <button onclick="exportHistory()" data-i18n="history.export" class="bg-brand-primary/10 hover:bg-brand-primary/25 text-brand-primary text-xs font-bold px-4 py-2 rounded-xl transition border border-brand-primary/30">
                     ייצוא JSON
                 </button>
-                <button onclick="document.getElementById('importHistoryInput').click()" class="bg-slate-700/50 hover:bg-slate-600/60 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition border border-slate-600/50">
+                <button onclick="document.getElementById('importHistoryInput').click()" data-i18n="history.import" class="bg-slate-700/50 hover:bg-slate-600/60 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition border border-slate-600/50">
                     ייבוא JSON
                 </button>
                 <input type="file" id="importHistoryInput" accept="application/json,.json" class="hidden" onchange="importHistory(event)">
-                <button onclick="clearAllHistory()" class="bg-red-900/40 hover:bg-red-800/60 text-red-400 text-xs font-bold px-4 py-2 rounded-xl transition border border-red-800/40">
+                <button onclick="clearAllHistory()" data-i18n="history.clear" class="bg-red-900/40 hover:bg-red-800/60 text-red-400 text-xs font-bold px-4 py-2 rounded-xl transition border border-red-800/40">
                     נקה הכל
                 </button>
             </div>
         </div>
         <div id="historyList" class="space-y-3">
-            <p id="historyEmpty" class="text-slate-500 text-sm text-center py-6">אין היסטוריה שמורה עדיין.</p>
+            <p id="historyEmpty" class="text-slate-500 text-sm text-center py-6" data-i18n="history.empty">אין היסטוריה שמורה עדיין.</p>
         </div>
     </div>
 </section>
@@ -259,6 +262,254 @@ tailwind.config = {
     const MAX_CLAUDE_LENGTH = 1400;
     const HISTORY_KEY = 'promptEngineHistory';
     const SETTINGS_KEY = 'promptEngineSettings';
+    const LANG_KEY = 'promptEngineLang';
+
+    // ---------------------------------------------------------------------------
+    // i18n
+    // ---------------------------------------------------------------------------
+    let currentLang = 'he';
+    let settingsNoteKey = null;
+
+    const TRANSLATIONS = {
+        he: {
+            'lang.toggleAria': 'החלף שפה לאנגלית',
+            'header.subtitle': 'סביבת העבודה הרשמית ליצירת הרחבות (Plugins), שרתי הקשר (MCP) וכישורים (Skills) עבור Claude Code.',
+            'settings.title': 'הגדרות יצירה',
+            'settings.provider': 'ספק',
+            'settings.model': 'מודל',
+            'settings.temperature': 'טמפרטורה',
+            'settings.maxTokens': 'אורך מקסימלי (טוקנים)',
+            'settings.noApiKey': ' — אין מפתח API',
+            'settings.note.fetchFail': 'לא ניתן לטעון הגדרות ספק — היצירה תשתמש בברירות המחדל של השרת.',
+            'settings.note.noProviders': 'לא נמצאו ספקים זמינים — היצירה תשתמש בברירות המחדל של השרת.',
+            'arch.title': 'הארכיטקטורה החדשה: MCP ו-Skills',
+            'arch.mcp.desc': 'תקן פתוח לחיבור Claude למקורות מידע וכלים חיצוניים. במקום לכתוב קוד אינטגרציה לכל API, אנו משתמשים בשרתי MCP מובנים המוגדרים בקובץ <code class="text-brand-primary">.mcp.json</code>.',
+            'arch.mcp.li1': '🔹 <strong>הגדרה:</strong> הוספה באמצעות <code class="bg-slate-900 px-1 rounded">claude mcp add</code>.',
+            'arch.mcp.li2': '🔹 <strong>דוגמאות:</strong> Fetcher, Playwright, Database, Filesystem.',
+            'arch.mcp.li3': '🔹 <strong>יעילות:</strong> נטען On-Demand כדי לחסוך טוקנים ב-Context Window.',
+            'arch.skills.desc': 'מודולים המעניקים ל-Claude ידע תהליכי (Procedural Knowledge). ממוקמים תחת <code class="text-brand-secondary">~/.claude/skills/</code> ומאפשרים ל-Claude לבצע משימות ספציפיות באופן עצמאי.',
+            'arch.skills.li1': '🔸 <strong>מבנה:</strong> דורש Frontmatter (שם ותיאור) כדי להיטען נכון.',
+            'arch.skills.li2': '🔸 <strong>סגנון כתיבה:</strong> ציווי (Imperative) - "עשה X", "בדוק Y", לא "כדאי שתעשה".',
+            'arch.skills.li3': '🔸 <strong>גילוי אוטומטי:</strong> Claude מחפש את התיאור וטוען את הכישרון כשהמשתמש מבקש.',
+            'skillgen.title': 'מחולל מיומנויות (Skill Creator)',
+            'skillgen.desc': 'תאר את התהליך העסקי או האנליטי. המערכת תייצר עבורך קובץ <code>SKILL.md</code> תקני המשלב תגיות XML של Anthropic ודרישות שרתי MCP רלוונטיות לתחום.',
+            'skillgen.placeholder': 'למשל: יצירת תוכנית אימונים לטריאתלון המבוססת על מדדי דופק שבועיים מקבצי אקסל...',
+            'skillgen.btnSkill': '📦 צור קובץ SKILL.md',
+            'skillgen.btnStandard': '✨ פרומפט סוכן רגיל',
+            'skillgen.btnAdvanced': '🚀 חשיבה מעמיקה (CoT)',
+            'output.copyAll': 'העתק הכל',
+            'output.copy': 'העתק',
+            'output.download': 'הורד',
+            'output.label.skill': 'קובץ SKILL.md (תקן ANTHROPIC)',
+            'output.label.standard': 'פרומפט מערכת (מבוסס XML)',
+            'output.label.advanced': 'פרומפט חשיבה מעמיקה (CHAIN OF THOUGHT מורחב)',
+            'refine.placeholder': 'תאר שינוי לביצוע…',
+            'refine.btn': '↻ שכתב',
+            'refine.promptPrefix': 'שינוי מבוקש: ',
+            'refine.rewrittenSuffix': ' (שוכתב)',
+            'claudegen.title': 'הגדרת פרויקט (CLAUDE.md)',
+            'claudegen.desc': 'הגדר כללים גלובליים לפרויקט, כולל שילובי MCP הנדרשים. קובץ זה יקשר בין ה-Skills שלך לסביבת הריצה ב-VS Code.',
+            'claudegen.placeholder': 'טכנולוגיות וכללים: Python, GTFS, דרישה לשרת MCP של בסיס נתונים...',
+            'claudegen.btn': '✨ הפק CLAUDE.md',
+            'history.title': 'היסטוריית פרומפטים',
+            'history.export': 'ייצוא JSON',
+            'history.import': 'ייבוא JSON',
+            'history.clear': 'נקה הכל',
+            'history.empty': 'אין היסטוריה שמורה עדיין.',
+            'history.restore': 'שחזר',
+            'history.confirmClear': 'למחוק את כל ההיסטוריה?',
+            'history.nothingToExport': 'אין היסטוריה לייצוא',
+            'history.badge.skill': 'SKILL.md',
+            'history.badge.standard': 'פרומפט מערכת',
+            'history.badge.advanced': 'חשיבה מעמיקה',
+            'history.badge.claudeMd': 'CLAUDE.md',
+            'usage.line': 'כ־{total} טוקנים · {input} קלט · {output} פלט · {cost}',
+            'usage.approxTokens': 'כ־{n} טוקנים',
+            'usage.costUnknown': 'עלות לא ידועה',
+            'import.invalidFile': 'קובץ לא תקין',
+            'import.summary': 'יובאו {imported} רשומות, דילוג על {duplicates} כפילויות, {invalid} רשומות לא תקינות',
+            'validate.empty': 'הקלט ריק.',
+            'validate.tooLong': 'הקלט חורג מ־{n} תווים.',
+            'error.prefix': 'שגיאה: ',
+            'error.skillValidation': 'יצירת קובץ SKILL.md נכשלה באימות. פשט את המשימה ונסה שוב.',
+            'alert.copied': 'התוכן הועתק בהצלחה!',
+            'alert.copyFail': 'לא ניתן להעתיק ללוח. נסה שוב.',
+            'tpl.sys.skill': "You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.\nWrite all human-readable prose and descriptions in Hebrew; keep every YAML key, XML tag, identifier, file path, and command in English.",
+            'tpl.sys.standard': "You are an expert Prompt Engineer for Anthropic models. Create a robust System Prompt using Anthropic's XML tag methodology. Include tags like <role>, <context>, <objective>, <tools_and_mcp>, <rules>, and <response_format>. Ensure the prompt clearly instructs the model to use <thinking> before acting. Write all human-readable prose inside the prompt in Hebrew, but keep every XML tag and structural token in English.",
+            'tpl.sys.advanced': "You are an expert Prompt Engineer for Anthropic models. Create an advanced, high-performance system prompt designed for complex reasoning. You must enforce a rigorous multi-step Chain of Thought reasoning style. Use XML tags including: <role>, <context>, <thinking>, <error_handling>, <validation_checklists>, <response_format>. Instruct the model to think step-by-step and show its work in Hebrew, but keep structural variables in English.",
+            'tpl.sys.claudemd': "You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions. Write all human-readable prose and descriptions in Hebrew; keep every command, file path, identifier, and structural token in English."
+        },
+        en: {
+            'lang.toggleAria': 'Switch language to Hebrew',
+            'header.subtitle': 'The official workspace for building plugins, context servers (MCP), and skills for Claude Code.',
+            'settings.title': 'Generation settings',
+            'settings.provider': 'Provider',
+            'settings.model': 'Model',
+            'settings.temperature': 'Temperature',
+            'settings.maxTokens': 'Max length (tokens)',
+            'settings.noApiKey': ' — no API key',
+            'settings.note.fetchFail': 'Could not load provider settings — generation will use the server defaults.',
+            'settings.note.noProviders': 'No providers available — generation will use the server defaults.',
+            'arch.title': 'The new architecture: MCP and Skills',
+            'arch.mcp.desc': 'An open standard for connecting Claude to external data sources and tools. Instead of writing integration code for every API, we use built-in MCP servers defined in a <code class="text-brand-primary">.mcp.json</code> file.',
+            'arch.mcp.li1': '🔹 <strong>Setup:</strong> add it with <code class="bg-slate-900 px-1 rounded">claude mcp add</code>.',
+            'arch.mcp.li2': '🔹 <strong>Examples:</strong> Fetcher, Playwright, Database, Filesystem.',
+            'arch.mcp.li3': '🔹 <strong>Efficiency:</strong> loaded on-demand to save tokens in the context window.',
+            'arch.skills.desc': 'Modules that give Claude procedural knowledge. They live under <code class="text-brand-secondary">~/.claude/skills/</code> and let Claude carry out specific tasks on its own.',
+            'arch.skills.li1': '🔸 <strong>Structure:</strong> requires frontmatter (name and description) to load correctly.',
+            'arch.skills.li2': '🔸 <strong>Writing style:</strong> imperative - "Do X", "Check Y", not "You should".',
+            'arch.skills.li3': '🔸 <strong>Auto-discovery:</strong> Claude scans the description and loads the skill when the user asks.',
+            'skillgen.title': 'Skill Creator',
+            'skillgen.desc': 'Describe the business or analytical process. The system generates a standards-compliant <code>SKILL.md</code> file combining Anthropic XML tags and the MCP server requirements relevant to the domain.',
+            'skillgen.placeholder': 'e.g. Build a triathlon training plan based on weekly heart-rate metrics from Excel files...',
+            'skillgen.btnSkill': '📦 Create SKILL.md file',
+            'skillgen.btnStandard': '✨ Standard agent prompt',
+            'skillgen.btnAdvanced': '🚀 Deep thinking (CoT)',
+            'output.copyAll': 'Copy all',
+            'output.copy': 'Copy',
+            'output.download': 'Download',
+            'output.label.skill': 'SKILL.md FILE (ANTHROPIC STANDARD)',
+            'output.label.standard': 'SYSTEM PROMPT (XML BASED)',
+            'output.label.advanced': 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)',
+            'refine.placeholder': 'Describe a change to make…',
+            'refine.btn': '↻ Rewrite',
+            'refine.promptPrefix': 'Requested change: ',
+            'refine.rewrittenSuffix': ' (rewritten)',
+            'claudegen.title': 'Project setup (CLAUDE.md)',
+            'claudegen.desc': 'Define global project rules, including the required MCP integrations. This file links your skills to the runtime environment in VS Code.',
+            'claudegen.placeholder': 'Tech stack and rules: Python, GTFS, a database MCP server requirement...',
+            'claudegen.btn': '✨ Generate CLAUDE.md',
+            'history.title': 'Prompt history',
+            'history.export': 'Export JSON',
+            'history.import': 'Import JSON',
+            'history.clear': 'Clear all',
+            'history.empty': 'No saved history yet.',
+            'history.restore': 'Restore',
+            'history.confirmClear': 'Delete all history?',
+            'history.nothingToExport': 'No history to export',
+            'history.badge.skill': 'SKILL.md',
+            'history.badge.standard': 'System Prompt',
+            'history.badge.advanced': 'Deep Thinking',
+            'history.badge.claudeMd': 'CLAUDE.md',
+            'usage.line': '~{total} tokens · {input} in · {output} out · {cost}',
+            'usage.approxTokens': '~{n} tokens',
+            'usage.costUnknown': 'cost unknown',
+            'import.invalidFile': 'Invalid file',
+            'import.summary': 'Imported {imported} entries, skipped {duplicates} duplicates, {invalid} invalid',
+            'validate.empty': 'Input is empty.',
+            'validate.tooLong': 'Input exceeds {n} characters.',
+            'error.prefix': 'Error: ',
+            'error.skillValidation': 'Generated SKILL.md failed validation. Please simplify the task and try again.',
+            'alert.copied': 'Copied to clipboard!',
+            'alert.copyFail': 'Unable to copy to clipboard. Please try again.',
+            'tpl.sys.skill': "You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.\nWrite all human-readable prose and descriptions in English.",
+            'tpl.sys.standard': "You are an expert Prompt Engineer for Anthropic models. Create a robust System Prompt using Anthropic's XML tag methodology. Include tags like <role>, <context>, <objective>, <tools_and_mcp>, <rules>, and <response_format>. Ensure the prompt clearly instructs the model to use <thinking> before acting. Write all human-readable prose inside the prompt in English, and keep every XML tag and structural token in English.",
+            'tpl.sys.advanced': "You are an expert Prompt Engineer for Anthropic models. Create an advanced, high-performance system prompt designed for complex reasoning. You must enforce a rigorous multi-step Chain of Thought reasoning style. Use XML tags including: <role>, <context>, <thinking>, <error_handling>, <validation_checklists>, <response_format>. Instruct the model to think step-by-step and show its work in English, and keep structural variables in English.",
+            'tpl.sys.claudemd': "You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions. Write all human-readable prose and descriptions in English."
+        }
+    };
+
+    function t(key, vars) {
+        const dict = TRANSLATIONS[currentLang] || TRANSLATIONS.he;
+        let s = (dict && dict[key] != null) ? dict[key]
+              : (TRANSLATIONS.he[key] != null ? TRANSLATIONS.he[key] : key);
+        if (vars) {
+            s = String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));
+        }
+        return s;
+    }
+
+    function i18nHas(key) {
+        return (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key] != null)
+            || TRANSLATIONS.he[key] != null;
+    }
+
+    const OUTPUT_LABEL_CLASS = {
+        skill: 'text-xs text-brand-secondary font-bold uppercase tracking-widest',
+        standard: 'text-xs text-brand-primary font-bold uppercase tracking-widest',
+        advanced: 'text-xs text-brand-secondary font-bold uppercase tracking-widest'
+    };
+
+    function setOutputLabel(kind) {
+        const el = document.getElementById('outputTypeLabel');
+        if (!el || !kind || !i18nHas('output.label.' + kind)) return;
+        el.textContent = t('output.label.' + kind);
+        if (OUTPUT_LABEL_CLASS[kind]) el.className = OUTPUT_LABEL_CLASS[kind];
+    }
+
+    function localeTag() {
+        return currentLang === 'he' ? 'he-IL' : 'en-US';
+    }
+
+    function applyLang(lang) {
+        if (lang !== 'he' && lang !== 'en') lang = 'he';
+        currentLang = lang;
+        const dict = TRANSLATIONS[lang];
+
+        document.documentElement.lang = lang;
+        document.documentElement.dir = (lang === 'he') ? 'rtl' : 'ltr';
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const v = dict[el.getAttribute('data-i18n')];
+            if (v != null) el.textContent = v;
+        });
+        document.querySelectorAll('[data-i18n-html]').forEach(el => {
+            const v = dict[el.getAttribute('data-i18n-html')];
+            if (v != null) el.innerHTML = v;
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const v = dict[el.getAttribute('data-i18n-placeholder')];
+            if (v != null) el.setAttribute('placeholder', v);
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const v = dict[el.getAttribute('data-i18n-title')];
+            if (v != null) el.setAttribute('title', v);
+        });
+        document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+            const v = dict[el.getAttribute('data-i18n-aria-label')];
+            if (v != null) el.setAttribute('aria-label', v);
+        });
+
+        // Direction-aware placement for the fixed corner elements.
+        const wm = document.getElementById('rvWatermark');
+        if (wm) {
+            wm.classList.toggle('left-4', lang === 'he');
+            wm.classList.toggle('right-4', lang !== 'he');
+        }
+        const tg = document.getElementById('langToggle');
+        if (tg) {
+            tg.classList.toggle('right-4', lang === 'he');
+            tg.classList.toggle('left-4', lang !== 'he');
+            tg.textContent = (lang === 'he') ? 'EN' : 'עברית';
+        }
+    }
+
+    function refreshProviderLabels() {
+        if (!providersData) return;
+        const sel = document.getElementById('providerSelect');
+        const providers = providersData.providers || [];
+        Array.from(sel.options).forEach(opt => {
+            const p = providers.find(x => x.id === opt.value);
+            if (p) opt.textContent = p.available ? p.label : (p.label + t('settings.noApiKey'));
+        });
+    }
+
+    function refreshDynamicText() {
+        refreshProviderLabels();
+        if (settingsNoteKey) {
+            const n = document.getElementById('settingsNote');
+            if (n) n.textContent = t(settingsNoteKey);
+        }
+        if (currentPromptKind) setOutputLabel(currentPromptKind);
+        renderHistory();
+    }
+
+    function onLangToggle() {
+        const next = (currentLang === 'he') ? 'en' : 'he';
+        try { localStorage.setItem(LANG_KEY, next); } catch (e) {}
+        applyLang(next);
+        refreshDynamicText();
+    }
 
     // Generation-settings state
     let providersData = null;
@@ -346,13 +597,14 @@ tailwind.config = {
         mt.value = mtv;
     }
 
-    function disableSettingsPanel(message) {
+    function disableSettingsPanel(messageKey) {
         settingsAvailable = false;
+        settingsNoteKey = messageKey;
         const panel = document.getElementById('settingsPanel');
         panel.querySelectorAll('select, input').forEach(el => { el.disabled = true; });
         panel.classList.add('opacity-60');
         const note = document.getElementById('settingsNote');
-        note.textContent = message;
+        note.textContent = t(messageKey);
         note.classList.remove('hidden');
     }
 
@@ -364,13 +616,13 @@ tailwind.config = {
             data = await res.json();
         } catch (err) {
             console.error('Providers fetch failed:', err);
-            disableSettingsPanel('לא ניתן לטעון הגדרות ספק — היצירה תשתמש בברירות המחדל של השרת.');
+            disableSettingsPanel('settings.note.fetchFail');
             return;
         }
 
         const providers = (data && data.providers) || [];
         if (!providers.length) {
-            disableSettingsPanel('לא נמצאו ספקים זמינים — היצירה תשתמש בברירות המחדל של השרת.');
+            disableSettingsPanel('settings.note.noProviders');
             return;
         }
 
@@ -382,7 +634,7 @@ tailwind.config = {
         providers.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
-            opt.textContent = p.available ? p.label : (p.label + ' — אין מפתח API');
+            opt.textContent = p.available ? p.label : (p.label + t('settings.noApiKey'));
             if (!p.available) opt.disabled = true;
             sel.appendChild(opt);
         });
@@ -499,8 +751,12 @@ tailwind.config = {
 
         history.forEach(item => {
             const date = new Date(item.timestamp);
-            const dateStr = date.toLocaleDateString('he-IL') + ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+            const loc = localeTag();
+            const dateStr = date.toLocaleDateString(loc) + ' ' + date.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
             const preview = item.input.length > 80 ? item.input.slice(0, 80) + '…' : item.input;
+            const badgeLabel = i18nHas('history.badge.' + item.type)
+                ? t('history.badge.' + item.type)
+                : (item.label || item.type);
 
             const typeColors = {
                 skill: 'text-brand-secondary bg-brand-secondary/10 border-brand-secondary/30',
@@ -518,8 +774,8 @@ tailwind.config = {
                 if (item.usage.estCostUsd != null) {
                     metaBits.push(formatUsdCost(item.usage.estCostUsd));
                 } else {
-                    const t = (Number(item.usage.inputTokens) || 0) + (Number(item.usage.outputTokens) || 0);
-                    if (t) metaBits.push('כ־' + t.toLocaleString('he-IL') + ' טוקנים');
+                    const totTok = (Number(item.usage.inputTokens) || 0) + (Number(item.usage.outputTokens) || 0);
+                    if (totTok) metaBits.push(t('usage.approxTokens', { n: totTok.toLocaleString(localeTag()) }));
                 }
             }
             const settingsTag = metaBits.length
@@ -531,14 +787,14 @@ tailwind.config = {
             div.innerHTML = `
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1 flex-wrap">
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">${item.label}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">${badgeLabel}</span>
                         <span class="text-slate-500 text-xs">${dateStr}</span>
                         ${settingsTag}
                     </div>
                     <p class="text-slate-300 text-sm truncate">${preview}</p>
                 </div>
                 <div class="flex gap-2 shrink-0">
-                    <button onclick="restoreHistoryItem('${item.id}')" class="bg-brand-primary/20 hover:bg-brand-primary/40 text-brand-primary text-xs px-3 py-1.5 rounded-lg transition font-bold">שחזר</button>
+                    <button onclick="restoreHistoryItem('${item.id}')" class="bg-brand-primary/20 hover:bg-brand-primary/40 text-brand-primary text-xs px-3 py-1.5 rounded-lg transition font-bold">${t('history.restore')}</button>
                     <button onclick="deleteHistoryItem('${item.id}')" class="bg-slate-700/60 hover:bg-red-900/40 text-slate-400 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg transition">✕</button>
                 </div>`;
             container.appendChild(div);
@@ -564,9 +820,11 @@ tailwind.config = {
             document.getElementById('promptInput').value = item.input;
             currentPromptKind = item.type;
             const outputDiv = document.getElementById('promptOutput');
-            const label = document.getElementById('outputTypeLabel');
-            const labelMap = { skill: 'SKILL.md FILE', standard: 'SYSTEM PROMPT (XML BASED)', advanced: 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)' };
-            label.textContent = labelMap[item.type] || item.label;
+            if (i18nHas('output.label.' + item.type)) {
+                setOutputLabel(item.type);
+            } else {
+                document.getElementById('outputTypeLabel').textContent = item.label;
+            }
             outputDiv.querySelector('pre').textContent = item.output;
             outputDiv.classList.remove('hidden');
             renderUsage(outputDiv, item.usage || null);
@@ -582,7 +840,7 @@ tailwind.config = {
     }
 
     function clearAllHistory() {
-        if (!confirm('למחוק את כל ההיסטוריה?')) return;
+        if (!confirm(t('history.confirmClear'))) return;
         localStorage.removeItem(HISTORY_KEY);
         renderHistory();
     }
@@ -590,7 +848,7 @@ tailwind.config = {
     function exportHistory() {
         const history = loadHistory();
         if (!history.length) {
-            alert('אין היסטוריה לייצוא');
+            alert(t('history.nothingToExport'));
             return;
         }
         const today = new Date().toISOString().slice(0, 10);
@@ -608,17 +866,17 @@ tailwind.config = {
         };
 
         const reader = new FileReader();
-        reader.onerror = () => finish('קובץ לא תקין');
+        reader.onerror = () => finish(t('import.invalidFile'));
         reader.onload = () => {
             let parsed;
             try {
                 parsed = JSON.parse(reader.result);
             } catch (e) {
-                return finish('קובץ לא תקין');
+                return finish(t('import.invalidFile'));
             }
 
             if (!Array.isArray(parsed)) {
-                return finish('קובץ לא תקין');
+                return finish(t('import.invalidFile'));
             }
 
             let invalid = 0;
@@ -658,7 +916,7 @@ tailwind.config = {
             localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
             renderHistory();
 
-            finish('יובאו ' + imported.length + ' רשומות, דילוג על ' + duplicates + ' כפילויות, ' + invalid + ' רשומות לא תקינות');
+            finish(t('import.summary', { imported: imported.length, duplicates: duplicates, invalid: invalid }));
         };
         reader.readAsText(file);
     }
@@ -677,8 +935,8 @@ tailwind.config = {
     }
 
     function validatePrompt(text, maxLength) {
-        if (!text) return 'Input is empty.';
-        if (text.length > maxLength) return `Input exceeds ${maxLength} characters.`;
+        if (!text) return t('validate.empty');
+        if (text.length > maxLength) return t('validate.tooLong', { n: maxLength });
         return null;
     }
 
@@ -686,7 +944,7 @@ tailwind.config = {
     // (~$0.0021), otherwise 2 decimals (~$0.14).
     function formatUsdCost(value) {
         const c = Number(value);
-        if (!Number.isFinite(c)) return 'עלות לא ידועה';
+        if (!Number.isFinite(c)) return t('usage.costUnknown');
         if (c === 0) return '~$0.00';
         if (c < 0.01) {
             let s = c.toPrecision(4);
@@ -714,9 +972,9 @@ tailwind.config = {
         const input = Number(usage.inputTokens) || 0;
         const output = Number(usage.outputTokens) || 0;
         const total = input + output;
-        const fmt = (n) => n.toLocaleString('he-IL');
-        const costStr = (usage.estCostUsd == null) ? 'עלות לא ידועה' : formatUsdCost(usage.estCostUsd);
-        el.textContent = `כ־${fmt(total)} טוקנים · ${fmt(input)} קלט · ${fmt(output)} פלט · ${costStr}`;
+        const fmt = (n) => n.toLocaleString(localeTag());
+        const costStr = (usage.estCostUsd == null) ? t('usage.costUnknown') : formatUsdCost(usage.estCostUsd);
+        el.textContent = t('usage.line', { total: fmt(total), input: fmt(input), output: fmt(output), cost: costStr });
         el.classList.remove('hidden');
     }
 
@@ -747,16 +1005,15 @@ tailwind.config = {
         if (!instruction) return;
 
         const kind = isClaude ? 'claudeMd' : currentPromptKind;
-        const labelMap = { skill: 'SKILL.md', standard: 'System Prompt', advanced: 'Deep Thinking', claudeMd: 'CLAUDE.md' };
-        const baseLabel = labelMap[kind] || 'OUTPUT';
+        const baseLabel = i18nHas('history.badge.' + kind) ? t('history.badge.' + kind) : 'OUTPUT';
 
         await runRequest(btn, outputDiv, async () => {
             const systemInstruction = `You are editing an existing document. Apply ONLY the change the user requests and return the COMPLETE updated document with no commentary, no code fences, and no preamble. Preserve everything else exactly — structure, formatting, language.`;
-            const prompt = currentDoc + `\n\n---\nשינוי מבוקש: ` + instruction;
+            const prompt = currentDoc + `\n\n---\n` + t('refine.promptPrefix') + instruction;
             const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction }, outputDiv);
             showOutput(outputDiv, result, false);
             renderUsage(outputDiv, usage);
-            saveToHistory(kind, baseLabel + ' (שוכתב)', '↻ ' + instruction, result, usage);
+            saveToHistory(kind, baseLabel + t('refine.rewrittenSuffix'), '↻ ' + instruction, result, usage);
             inputEl.value = '';
         });
     }
@@ -864,7 +1121,7 @@ tailwind.config = {
             await callback();
         } catch (error) {
             console.error('Request failed:', error);
-            showOutput(outputDiv, `Error: ${error.message}`, true);
+            showOutput(outputDiv, t('error.prefix') + error.message, true);
         } finally {
             btn.innerHTML = originalText;
             setAllControlsDisabled(false);
@@ -883,17 +1140,16 @@ tailwind.config = {
 
         const btn = document.getElementById('skillBtn');
         currentPromptKind = 'skill';
-        document.getElementById('outputTypeLabel').textContent = 'SKILL.md FILE (ANTHROPIC STANDARD)';
-        document.getElementById('outputTypeLabel').className = 'text-xs text-brand-secondary font-bold uppercase tracking-widest';
+        setOutputLabel('skill');
 
         await runRequest(btn, outputDiv, async () => {
-            const system = `You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.`;
+            const system = t('tpl.sys.skill');
 
             const prompt = `Create a Claude Code Skill (SKILL.md) for the following task:\n${input}`;
             const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
 
             if (!result.includes('name:') || !result.includes('description:')) {
-                throw new Error('Generated SKILL.md failed validation. Please simplify the task and try again.');
+                throw new Error(t('error.skillValidation'));
             }
 
             showOutput(outputDiv, result, false);
@@ -915,18 +1171,12 @@ tailwind.config = {
         const btn = mode === 'advanced' ? document.getElementById('sysPromptBtnAdv') : document.getElementById('sysPromptBtn');
         currentPromptKind = mode === 'advanced' ? 'advanced' : 'standard';
 
-        if (mode === 'advanced') {
-            document.getElementById('outputTypeLabel').textContent = 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)';
-            document.getElementById('outputTypeLabel').className = 'text-xs text-brand-secondary font-bold uppercase tracking-widest';
-        } else {
-            document.getElementById('outputTypeLabel').textContent = 'SYSTEM PROMPT (XML BASED)';
-            document.getElementById('outputTypeLabel').className = 'text-xs text-brand-primary font-bold uppercase tracking-widest';
-        }
+        setOutputLabel(mode === 'advanced' ? 'advanced' : 'standard');
 
         await runRequest(btn, outputDiv, async () => {
             const system = mode === 'advanced'
-                ? `You are an expert Prompt Engineer for Anthropic models. Create an advanced, high-performance system prompt designed for complex reasoning. You must enforce a rigorous multi-step Chain of Thought reasoning style. Use XML tags including: <role>, <context>, <thinking>, <error_handling>, <validation_checklists>, <response_format>. Instruct the model to think step-by-step and show its work in Hebrew, but keep structural variables in English.`
-                : `You are an expert Prompt Engineer for Anthropic models. Create a robust System Prompt using Anthropic's XML tag methodology. Include tags like <role>, <context>, <objective>, <tools_and_mcp>, <rules>, and <response_format>. Ensure the prompt clearly instructs the model to use <thinking> before acting.`;
+                ? t('tpl.sys.advanced')
+                : t('tpl.sys.standard');
 
             const prompt = mode === 'advanced'
                 ? `Create a deep-reasoning, advanced system prompt with extended Chain of Thought for: ${input}`
@@ -952,7 +1202,7 @@ tailwind.config = {
         }
 
         await runRequest(btn, outputDiv, async () => {
-            const system = `You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions.`;
+            const system = t('tpl.sys.claudemd');
             const prompt = `Create CLAUDE.md for: ${input}`;
             const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
 
@@ -964,11 +1214,14 @@ tailwind.config = {
             showOutput(outputDiv, result, false);
             renderUsage(outputDiv, usage);
             saveToHistory('claudeMd', 'CLAUDE.md', input, result, usage);
-            btn.innerHTML = '✨ הפק CLAUDE.md';
+            btn.innerHTML = t('claudegen.btn');
         });
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        let lang = 'he';
+        try { lang = localStorage.getItem(LANG_KEY) || 'he'; } catch (e) {}
+        applyLang(lang);
         renderHistory();
         initSettings();
     });
@@ -977,10 +1230,10 @@ tailwind.config = {
         const text = document.getElementById(elementId).querySelector('pre').textContent;
         try {
             await navigator.clipboard.writeText(text);
-            alert('התוכן הועתק בהצלחה!');
+            alert(t('alert.copied'));
         } catch (error) {
             console.error('Clipboard error:', error);
-            alert('Unable to copy to clipboard. Please try again.');
+            alert(t('alert.copyFail'));
         }
     }
 </script>
