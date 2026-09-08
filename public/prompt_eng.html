@@ -191,6 +191,7 @@ tailwind.config = {
                     </div>
                 </div>
                 <pre class="whitespace-pre-wrap text-slate-300"></pre>
+                <div class="usage-line hidden mt-3 text-[11px] text-slate-500 font-mono"></div>
                 <div class="refine-bar hidden mt-4 pt-3 border-t border-slate-700 flex gap-2 items-center">
                     <input id="promptRefineInput" type="text" placeholder="תאר שינוי לביצוע…" class="ai-input rounded-lg p-2 flex-1 text-xs" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('promptOutput');}">
                     <button id="promptRefineBtn" onclick="refinePanel('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
@@ -216,6 +217,7 @@ tailwind.config = {
                 <button onclick="downloadPanel('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">הורד</button>
             </div>
             <pre class="whitespace-pre-wrap text-green-400"></pre>
+            <div class="usage-line hidden mt-2 text-[10px] text-slate-500 font-mono"></div>
             <div class="refine-bar hidden mt-3 pt-2 border-t border-slate-700 flex gap-2 items-center">
                 <input id="claudeRefineInput" type="text" placeholder="תאר שינוי לביצוע…" class="ai-input rounded p-1.5 flex-1 text-[10px]" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('claudeOutput');}">
                 <button id="claudeRefineBtn" onclick="refinePanel('claudeOutput')" class="bg-brand-primary/20 text-brand-primary text-[10px] px-2 py-1 rounded hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
@@ -448,7 +450,7 @@ tailwind.config = {
         downloadText(filename, text);
     }
 
-    function saveToHistory(type, label, input, output) {
+    function saveToHistory(type, label, input, output, usage) {
         const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
         const gs = getGenerationSettings();
         const entry = {
@@ -461,6 +463,13 @@ tailwind.config = {
         };
         if (gs.provider || gs.model) {
             entry.settings = { provider: gs.provider, model: gs.model };
+        }
+        if (usageHasTokens(usage)) {
+            entry.usage = {
+                inputTokens: Number(usage.inputTokens) || 0,
+                outputTokens: Number(usage.outputTokens) || 0,
+                estCostUsd: (usage.estCostUsd == null) ? null : Number(usage.estCostUsd)
+            };
         }
         history.unshift(entry);
         if (history.length > 50) history.pop();
@@ -501,8 +510,20 @@ tailwind.config = {
             };
             const badgeClass = typeColors[item.type] || 'text-slate-400 bg-slate-800 border-slate-600';
 
-            const settingsTag = (item.settings && (item.settings.provider || item.settings.model))
-                ? `<span class="text-slate-500 text-[10px] font-mono">${[item.settings.provider, item.settings.model].filter(Boolean).join(' · ')}</span>`
+            const metaBits = [];
+            if (item.settings && (item.settings.provider || item.settings.model)) {
+                metaBits.push([item.settings.provider, item.settings.model].filter(Boolean).join(' · '));
+            }
+            if (item.usage && usageHasTokens(item.usage)) {
+                if (item.usage.estCostUsd != null) {
+                    metaBits.push(formatUsdCost(item.usage.estCostUsd));
+                } else {
+                    const t = (Number(item.usage.inputTokens) || 0) + (Number(item.usage.outputTokens) || 0);
+                    if (t) metaBits.push('כ־' + t.toLocaleString('he-IL') + ' טוקנים');
+                }
+            }
+            const settingsTag = metaBits.length
+                ? `<span class="text-slate-500 text-[10px] font-mono">${metaBits.join(' · ')}</span>`
                 : '';
 
             const div = document.createElement('div');
@@ -536,6 +557,7 @@ tailwind.config = {
             const outputDiv = document.getElementById('claudeOutput');
             outputDiv.querySelector('pre').textContent = item.output;
             outputDiv.classList.remove('hidden');
+            renderUsage(outputDiv, item.usage || null);
             showRefineBar(outputDiv);
             outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
@@ -547,6 +569,7 @@ tailwind.config = {
             label.textContent = labelMap[item.type] || item.label;
             outputDiv.querySelector('pre').textContent = item.output;
             outputDiv.classList.remove('hidden');
+            renderUsage(outputDiv, item.usage || null);
             showRefineBar(outputDiv);
             outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -659,6 +682,44 @@ tailwind.config = {
         return null;
     }
 
+    // Format a USD cost estimate: < $0.01 -> up to 4 significant digits
+    // (~$0.0021), otherwise 2 decimals (~$0.14).
+    function formatUsdCost(value) {
+        const c = Number(value);
+        if (!Number.isFinite(c)) return 'עלות לא ידועה';
+        if (c === 0) return '~$0.00';
+        if (c < 0.01) {
+            let s = c.toPrecision(4);
+            if (s.indexOf('e') !== -1) s = c.toFixed(6);
+            if (s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+            return '~$' + s;
+        }
+        return '~$' + c.toFixed(2);
+    }
+
+    function usageHasTokens(usage) {
+        return !!usage && (typeof usage.inputTokens === 'number' || typeof usage.outputTokens === 'number');
+    }
+
+    // Render (or clear, when usage is falsy) the muted token/cost line under a
+    // panel. One .usage-line per output panel.
+    function renderUsage(outputDiv, usage) {
+        const el = outputDiv && outputDiv.querySelector('.usage-line');
+        if (!el) return;
+        if (!usageHasTokens(usage)) {
+            el.textContent = '';
+            el.classList.add('hidden');
+            return;
+        }
+        const input = Number(usage.inputTokens) || 0;
+        const output = Number(usage.outputTokens) || 0;
+        const total = input + output;
+        const fmt = (n) => n.toLocaleString('he-IL');
+        const costStr = (usage.estCostUsd == null) ? 'עלות לא ידועה' : formatUsdCost(usage.estCostUsd);
+        el.textContent = `כ־${fmt(total)} טוקנים · ${fmt(input)} קלט · ${fmt(output)} פלט · ${costStr}`;
+        el.classList.remove('hidden');
+    }
+
     function showRefineBar(outputDiv) {
         const bar = outputDiv.querySelector('.refine-bar');
         if (bar) bar.classList.remove('hidden');
@@ -669,6 +730,7 @@ tailwind.config = {
         outputPre.textContent = message;
         outputPre.classList.toggle('text-red-400', isError);
         outputDiv.classList.remove('hidden');
+        if (isError) renderUsage(outputDiv, null);
         if (!isError) showRefineBar(outputDiv);
     }
 
@@ -691,9 +753,10 @@ tailwind.config = {
         await runRequest(btn, outputDiv, async () => {
             const systemInstruction = `You are editing an existing document. Apply ONLY the change the user requests and return the COMPLETE updated document with no commentary, no code fences, and no preamble. Preserve everything else exactly — structure, formatting, language.`;
             const prompt = currentDoc + `\n\n---\nשינוי מבוקש: ` + instruction;
-            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction }, outputDiv);
+            const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction }, outputDiv);
             showOutput(outputDiv, result, false);
-            saveToHistory(kind, baseLabel + ' (שוכתב)', '↻ ' + instruction, result);
+            renderUsage(outputDiv, usage);
+            saveToHistory(kind, baseLabel + ' (שוכתב)', '↻ ' + instruction, result, usage);
             inputEl.value = '';
         });
     }
@@ -709,7 +772,7 @@ tailwind.config = {
         if (!response.ok || result.error) {
             throw new Error(result.error || `Server returned ${response.status}`);
         }
-        return result.text;
+        return { text: result.text, usage: result.usage || null };
     }
 
     // Streams /api/generate/stream. Calls onDelta(fullTextSoFar) for each chunk.
@@ -780,14 +843,15 @@ tailwind.config = {
     // falls back once to the non-stream endpoint. Returns { text, usage }.
     async function generateInto(payload, outputDiv) {
         outputDiv.classList.remove('hidden');
+        renderUsage(outputDiv, null);
         try {
             return await sendGenerateRequestStream(payload, (soFar) => {
                 showOutput(outputDiv, soFar, false);
             });
         } catch (streamErr) {
             console.warn('Streaming failed, falling back to /api/generate:', streamErr);
-            const text = await sendGenerateRequest(payload);
-            return { text, usage: null };
+            const { text, usage } = await sendGenerateRequest(payload);
+            return { text, usage };
         }
     }
 
@@ -826,14 +890,15 @@ tailwind.config = {
             const system = `You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.`;
 
             const prompt = `Create a Claude Code Skill (SKILL.md) for the following task:\n${input}`;
-            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
+            const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
 
             if (!result.includes('name:') || !result.includes('description:')) {
                 throw new Error('Generated SKILL.md failed validation. Please simplify the task and try again.');
             }
 
             showOutput(outputDiv, result, false);
-            saveToHistory('skill', 'SKILL.md', input, result);
+            renderUsage(outputDiv, usage);
+            saveToHistory('skill', 'SKILL.md', input, result, usage);
         });
     }
 
@@ -867,10 +932,11 @@ tailwind.config = {
                 ? `Create a deep-reasoning, advanced system prompt with extended Chain of Thought for: ${input}`
                 : `Create a system prompt for: ${input}`;
 
-            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
+            const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
             showOutput(outputDiv, result, false);
+            renderUsage(outputDiv, usage);
             const histLabel = mode === 'advanced' ? 'Deep Thinking' : 'System Prompt';
-            saveToHistory(mode, histLabel, input, result);
+            saveToHistory(mode, histLabel, input, result, usage);
         });
     }
 
@@ -888,7 +954,7 @@ tailwind.config = {
         await runRequest(btn, outputDiv, async () => {
             const system = `You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions.`;
             const prompt = `Create CLAUDE.md for: ${input}`;
-            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
+            const { text: result, usage } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
 
             const normalized = result.toLowerCase();
             if (!normalized.includes('mcp') || !normalized.includes('build') || !normalized.includes('skill')) {
@@ -896,7 +962,8 @@ tailwind.config = {
             }
 
             showOutput(outputDiv, result, false);
-            saveToHistory('claudeMd', 'CLAUDE.md', input, result);
+            renderUsage(outputDiv, usage);
+            saveToHistory('claudeMd', 'CLAUDE.md', input, result, usage);
             btn.innerHTML = '✨ הפק CLAUDE.md';
         });
     }

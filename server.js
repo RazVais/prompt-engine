@@ -70,6 +70,15 @@ function openAiCompatible({ id, label, url, models, defaultModel, maxTokens }) {
         ? json.choices[0].message.content
         : undefined;
     },
+    // Non-stream response JSON -> {inputTokens, outputTokens} (or null).
+    extractUsage(json) {
+      const u = json && json.usage;
+      if (!u) return null;
+      const out = {};
+      if (typeof u.prompt_tokens === 'number') out.inputTokens = u.prompt_tokens;
+      if (typeof u.completion_tokens === 'number') out.outputTokens = u.completion_tokens;
+      return Object.keys(out).length ? out : null;
+    },
     buildStreamRequest(opts) {
       const base = this.buildRequest(opts);
       return {
@@ -139,6 +148,14 @@ const PROVIDERS = {
         ? json.candidates[0].content.parts[0].text
         : undefined;
     },
+    extractUsage(json) {
+      const u = json && json.usageMetadata;
+      if (!u) return null;
+      const out = {};
+      if (typeof u.promptTokenCount === 'number') out.inputTokens = u.promptTokenCount;
+      if (typeof u.candidatesTokenCount === 'number') out.outputTokens = u.candidatesTokenCount;
+      return Object.keys(out).length ? out : null;
+    },
     buildStreamRequest(opts) {
       const base = this.buildRequest(opts);
       return {
@@ -197,6 +214,14 @@ const PROVIDERS = {
         .filter((b) => b && b.type === 'text')
         .map((b) => b.text)
         .join('');
+    },
+    extractUsage(json) {
+      const u = json && json.usage;
+      if (!u) return null;
+      const out = {};
+      if (typeof u.input_tokens === 'number') out.inputTokens = u.input_tokens;
+      if (typeof u.output_tokens === 'number') out.outputTokens = u.output_tokens;
+      return Object.keys(out).length ? out : null;
     },
     buildStreamRequest(opts) {
       const base = this.buildRequest(opts);
@@ -261,6 +286,78 @@ const PROVIDERS = {
     maxTokens: { min: 256, max: 16384, default: 8192 }
   })
 };
+
+// ---------------------------------------------------------------------------
+// Pricing (APPROXIMATE — update from each provider's pricing page)
+// ---------------------------------------------------------------------------
+// USD per 1,000,000 tokens, { input, output }. Keyed by exact model id.
+// Resolution (see priceFor) falls back to the longest PRICING key that is a
+// prefix of the requested model, so dated snapshots such as
+// "gpt-4.1-mini-2025-04-14" or "claude-sonnet-5-20991231" still resolve.
+// These numbers drift — treat every estimate as a rough figure, not a bill.
+const PRICING = {
+  'gemini-2.5-flash': { input: 0.30, output: 2.50 },
+  'gemini-2.5-pro': { input: 1.25, output: 10.00 },
+  'gemini-2.0-flash': { input: 0.10, output: 0.40 },
+  'claude-opus-5': { input: 5, output: 25 },
+  'claude-sonnet-5': { input: 3, output: 15 },
+  'claude-haiku-4-5': { input: 1, output: 5 },
+  'claude-fable-5-1': { input: 10, output: 50 },
+  'gpt-4.1': { input: 2, output: 8 },
+  'gpt-4.1-mini': { input: 0.40, output: 1.60 },
+  'gpt-4o': { input: 2.50, output: 10 },
+  'gpt-4o-mini': { input: 0.15, output: 0.60 },
+  'grok-4': { input: 3, output: 15 },
+  'grok-3': { input: 3, output: 15 },
+  'grok-3-mini': { input: 0.30, output: 0.50 }
+};
+
+// Resolve a model id to its { input, output } price: exact match first, then the
+// longest PRICING key that is a prefix of the id. Returns null when nothing matches.
+function priceFor(model) {
+  if (typeof model !== 'string' || !model) return null;
+  if (PRICING[model]) return PRICING[model];
+  let best = null;
+  let bestLen = -1;
+  for (const key of Object.keys(PRICING)) {
+    if (model.startsWith(key) && key.length > bestLen) {
+      best = PRICING[key];
+      bestLen = key.length;
+    }
+  }
+  return best;
+}
+
+// Estimated USD cost for a generation, rounded to 6 decimals. Returns null when
+// the model is not priced (unknown — never guessed).
+function estimateCostUsd(model, inputTokens, outputTokens) {
+  const price = priceFor(model);
+  if (!price) return null;
+  const cost =
+    ((Number(inputTokens) || 0) / 1e6) * price.input +
+    ((Number(outputTokens) || 0) / 1e6) * price.output;
+  return Math.round(cost * 1e6) / 1e6;
+}
+
+// Normalize a raw provider usage object ({inputTokens?, outputTokens?} or null)
+// into the wire shape { inputTokens, outputTokens, estCostUsd } (missing counts
+// -> 0, estCostUsd may be null). Returns null when the provider reported no
+// token counts at all, so callers can omit `usage` entirely.
+function buildUsagePayload(model, rawUsage) {
+  if (
+    !rawUsage ||
+    (typeof rawUsage.inputTokens !== 'number' && typeof rawUsage.outputTokens !== 'number')
+  ) {
+    return null;
+  }
+  const inputTokens = Number(rawUsage.inputTokens) || 0;
+  const outputTokens = Number(rawUsage.outputTokens) || 0;
+  return {
+    inputTokens,
+    outputTokens,
+    estCostUsd: estimateCostUsd(model, inputTokens, outputTokens)
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Startup configuration warnings
@@ -328,8 +425,10 @@ function resolveMaxTokens(provider, raw) {
   return clamp(raw, provider.maxTokens.min, provider.maxTokens.max);
 }
 
-// Single generic upstream call. Never logs or embeds the request URL or API key
-// (Gemini's key travels in the URL) in any thrown error.
+// Single generic upstream call. Resolves to { text, usage } where usage is a
+// raw {inputTokens, outputTokens} object or null when the provider reported no
+// token counts. Never logs or embeds the request URL or API key (Gemini's key
+// travels in the URL) in any thrown error.
 async function callProvider(id, opts) {
   const provider = PROVIDERS[id];
   const { url, headers, body } = provider.buildRequest(opts);
@@ -358,7 +457,16 @@ async function callProvider(id, opts) {
   if (!text || typeof text !== 'string') {
     throw new Error(`${provider.label} returned an invalid response format.`);
   }
-  return text;
+
+  const rawUsage =
+    typeof provider.extractUsage === 'function' ? provider.extractUsage(json) : null;
+  const usage =
+    rawUsage &&
+    (typeof rawUsage.inputTokens === 'number' || typeof rawUsage.outputTokens === 'number')
+      ? rawUsage
+      : null;
+
+  return { text, usage };
 }
 
 // Streaming counterpart of callProvider. Opens a raw streaming request to the
@@ -505,8 +613,11 @@ app.post('/api/generate', rateLimit, async (req, res) => {
   let delay = 1000;
   while (attempt < 5) {
     try {
-      const text = await callProvider(providerId, opts);
-      return res.json({ text });
+      const { text, usage } = await callProvider(providerId, opts);
+      const payload = { text };
+      const usagePayload = buildUsagePayload(opts.model, usage);
+      if (usagePayload) payload.usage = usagePayload;
+      return res.json(payload);
     } catch (error) {
       attempt += 1;
       if (attempt >= 5) {
@@ -595,12 +706,8 @@ app.post('/api/generate/stream', rateLimit, async (req, res) => {
     try {
       const { usage } = await streamProvider(providerId, opts, onDelta);
       const terminal = { done: true };
-      if (usage) {
-        terminal.usage = {
-          inputTokens: Number(usage.inputTokens) || 0,
-          outputTokens: Number(usage.outputTokens) || 0
-        };
-      }
+      const usagePayload = buildUsagePayload(opts.model, usage);
+      if (usagePayload) terminal.usage = usagePayload;
       send(terminal);
       return res.end();
     } catch (error) {
@@ -639,6 +746,10 @@ module.exports = {
   PROVIDER_IDS,
   DEFAULT_PROVIDER,
   MODEL_NAME_RE,
+  PRICING,
+  priceFor,
+  estimateCostUsd,
+  buildUsagePayload,
   isConfigured,
   resolveTemperature,
   resolveMaxTokens,
