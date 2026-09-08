@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agents Expert Cheat Sheet - RV-DATA Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;800&display=swap');
+body {
+    font-family: 'Heebo', sans-serif;
+    background-color: #0f172a;
+    color: #e2e8f0;
+}
+.glass-card {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+.gradient-text {
+    background: linear-gradient(to left, #06b6d4, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.ai-input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #fff;
+    transition: all 0.3s ease;
+}
+.ai-input:focus {
+    border-color: #06b6d4;
+    outline: none;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+.loader {
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #06b6d4;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    height: 350px;
+    max-height: 400px;
+}
+</style>
+<script>
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                brand: {
+                    dark: '#0f172a',
+                    card: '#1e293b',
+                    primary: '#06b6d4',
+                    secondary: '#8b5cf6',
+                    accent: '#3b82f6'
+                }
+            }
+        }
+    }
+}
+</script>
+</head>
+<body class="antialiased min-h-screen pb-12 overflow-x-hidden">
+
+<div class="fixed top-4 left-4 z-50 glass-card px-5 py-2 rounded-full font-extrabold text-brand-primary tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.3)] border border-brand-primary/40 text-sm md:text-base cursor-default select-none transition hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] hover:scale-105">
+    RV-DATA
+</div>
+
+<button onclick="toggleHistory()" class="fixed top-4 right-4 z-50 glass-card px-4 py-2 rounded-xl font-bold text-white shadow-lg border border-slate-600 hover:bg-slate-800 transition flex items-center gap-2">
+    <span>⏱️</span>
+    <span class="hidden md:inline">היסטוריית פעולות</span>
+</button>
+
+<div id="historySidebar" class="fixed top-0 right-0 h-full w-80 md:w-96 glass-card border-l border-brand-primary/20 transform translate-x-full transition-transform duration-300 z-40 flex flex-col shadow-2xl bg-[#0f172a]/95 pt-20 pb-6 px-4">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-white">היסטוריית פרומפטים</h2>
+        <button onclick="clearHistory()" class="text-xs bg-red-500/20 text-red-400 px-3 py-1 rounded hover:bg-red-500/40 transition">נקה הכל</button>
+    </div>
+    <div id="historyList" class="flex-1 overflow-y-auto space-y-3 pr-2">
+    </div>
+</div>
+
+<div id="historyOverlay" onclick="toggleHistory()" class="fixed inset-0 bg-black/50 z-30 hidden transition-opacity opacity-0"></div>
+
+<header class="pt-24 pb-12 px-4 text-center relative overflow-hidden">
+    <div class="absolute inset-0 z-0 opacity-20" style="background-image: radial-gradient(circle at center, #8b5cf6 1px, transparent 1px); background-size: 24px 24px;"></div>
+    <div class="relative z-10 max-w-5xl mx-auto">
+        <div class="inline-block p-3 rounded-2xl bg-brand-secondary/20 text-brand-secondary text-4xl mb-4">🧠</div>
+        <h1 class="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">Anthropic <span class="gradient-text">Skills & MCP</span></h1>
+        <p class="text-xl text-slate-400 max-w-3xl mx-auto">סביבת העבודה הרשמית ליצירת הרחבות (Plugins), שרתי הקשר (MCP) וכישורים (Skills) עבור Claude Code.</p>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-3 border border-brand-secondary/30">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3">🔌</span>
+            <h2 class="text-3xl font-bold">הארכיטקטורה החדשה: MCP ו-Skills</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-800/80 p-6 rounded-2xl border-r-4 border-brand-primary transition hover:bg-slate-800">
+                <h3 class="text-xl font-bold text-white mb-2">Model Context Protocol (MCP)</h3>
+                <p class="text-slate-400 text-sm mb-4">תקן פתוח לחיבור Claude למקורות מידע וכלים חיצוניים. במקום לכתוב קוד אינטגרציה לכל API, אנו משתמשים בשרתי MCP מובנים המוגדרים בקובץ <code class="text-brand-primary">.mcp.json</code>.</p>
+                <ul class="text-sm text-slate-300 space-y-2">
+                    <li>🔹 <strong>הגדרה:</strong> הוספה באמצעות <code class="bg-slate-900 px-1 rounded">claude mcp add</code>.</li>
+                    <li>🔹 <strong>דוגמאות:</strong> Fetcher, Playwright, Database, Filesystem.</li>
+                    <li>🔹 <strong>יעילות:</strong> נטען On-Demand כדי לחסוך טוקנים ב-Context Window.</li>
+                </ul>
+            </div>
+            
+            <div class="bg-slate-800/80 p-6 rounded-2xl border-r-4 border-brand-secondary transition hover:bg-slate-800">
+                <h3 class="text-xl font-bold text-white mb-2">Claude Skills (SKILL.md)</h3>
+                <p class="text-slate-400 text-sm mb-4">מודולים המעניקים ל-Claude ידע תהליכי (Procedural Knowledge). ממוקמים תחת <code class="text-brand-secondary">~/.claude/skills/</code> ומאפשרים ל-Claude לבצע משימות ספציפיות באופן עצמאי.</p>
+                <ul class="text-sm text-slate-300 space-y-2">
+                    <li>🔸 <strong>מבנה:</strong> דורש Frontmatter (שם ותיאור) כדי להיטען נכון.</li>
+                    <li>🔸 <strong>סגנון כתיבה:</strong> ציווי (Imperative) - "עשה X", "בדוק Y", לא "כדאי שתעשה".</li>
+                    <li>🔸 <strong>גילוי אוטומטי:</strong> Claude מחפש את התיאור וטוען את הכישרון כשהמשתמש מבקש.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-2 border border-brand-primary/20" id="generatorSection">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3">🛠️</span>
+            <h2 class="text-3xl font-bold">מחולל מיומנויות וסוכנים</h2>
+        </div>
+        
+        <div class="flex flex-col space-y-4">
+            <p class="text-sm text-slate-400">תאר את התהליך העסקי, תפקיד הסוכן או האנליזה הנדרשת (למשל: תכנון אימוני טריאתלון, ניתוח נתוני תחבורה ציבורית GTFS, סינון דאטה).</p>
+            <textarea id="mainPromptInput" class="ai-input rounded-xl p-4 w-full h-28 resize-none text-base" placeholder="הזן תיאור משימה מפורט כאן..."></textarea>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button onclick="handleGeneration('skill')" id="btn-skill" class="bg-brand-secondary hover:bg-brand-secondary/80 text-white font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm shadow-lg">
+                    <span>📦 צור SKILL.md</span>
+                </button>
+                <button onclick="handleGeneration('standard')" id="btn-standard" class="bg-brand-primary hover:bg-brand-primary/80 text-slate-900 font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm shadow-lg">
+                    <span>✨ פרומפט XML סטנדרטי</span>
+                </button>
+                <button onclick="handleGeneration('advanced')" id="btn-advanced" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm shadow-lg border border-purple-400/30">
+                    <span>🚀 חשיבה מעמיקה (CoT)</span>
+                </button>
+            </div>
+
+            <div id="mainPromptOutput" class="hidden mt-6 bg-slate-900/90 p-6 rounded-2xl border border-brand-primary/40 text-sm font-mono overflow-auto max-h-[500px] relative group shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-3">
+                    <span id="outputTypeBadge" class="text-xs font-black uppercase tracking-widest px-2 py-1 rounded bg-slate-800 text-brand-primary">OUTPUT</span>
+                    <button onclick="copyToClipboard('mainPromptOutput')" class="bg-slate-700 text-white text-xs px-4 py-2 rounded-lg hover:bg-slate-600 transition flex items-center gap-1">
+                        <span>העתק</span>
+                    </button>
+                </div>
+                <pre class="whitespace-pre-wrap text-slate-300 leading-relaxed"></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 border border-slate-700">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3">🗂️</span>
+            <h2 class="text-2xl font-bold text-white">הגדרת פרויקט (CLAUDE.md)</h2>
+        </div>
+        <p class="text-slate-400 mb-4 text-sm leading-relaxed">הגדר כללים גלובליים לפרויקט, שילובי MCP הנדרשים ופקודות טרמינל נפוצות לקינפוג סביבת העבודה.</p>
+        <textarea id="claudeInput" class="ai-input rounded-xl p-4 w-full h-24 mb-4 resize-none" placeholder="טכנולוגיות וכללים: Python, GTFS, דרישה לשרת MCP של בסיס נתונים..."></textarea>
+        <button onclick="handleClaudeGeneration()" id="btn-claude" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition shadow-lg border border-slate-500/30">
+            ✨ הפק CLAUDE.md
+        </button>
+        <div id="claudeOutput" class="hidden mt-6 bg-slate-900/90 p-5 rounded-xl border border-slate-600 text-xs font-mono overflow-auto max-h-64 relative group shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]">
+            <div class="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
+                <span class="text-[10px] text-green-400 font-bold tracking-widest">CLAUDE.MD</span>
+                <button onclick="copyToClipboard('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded hover:bg-slate-700 transition">העתק</button>
+            </div>
+            <pre class="whitespace-pre-wrap text-green-300 leading-relaxed"></pre>
+        </div>
+    </section>
+
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-3">
+        <div class="flex flex-col md:flex-row items-center justify-between mb-8">
+            <div class="flex items-center mb-4 md:mb-0">
+                <span class="text-3xl mr-3 text-yellow-400">⚡</span>
+                <h2 class="text-3xl font-bold">יעילות מול מורכבות: ביצועי מערכות סוכנים</h2>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div class="space-y-6">
+                <p class="text-slate-300 leading-relaxed">מעבר מסוכן בודד למערכת מרובת סוכנים (Multi-Agent) המבוססת על Skills ו-MCP משנה לחלוטין את התפלגות הביצועים.</p>
+                <div class="bg-slate-800 p-5 rounded-xl border-l-4 border-brand-primary">
+                    <h4 class="font-bold text-white mb-1">דיוק ואנליזה</h4>
+                    <p class="text-sm text-slate-400">עליה משמעותית בדיוק במשימות כמו ניתוח מסדי נתונים מורכבים (GTFS).</p>
+                </div>
+                <div class="bg-slate-800 p-5 rounded-xl border-l-4 border-brand-secondary">
+                    <h4 class="font-bold text-white mb-1">תחזוקה ומורכבות</h4>
+                    <p class="text-sm text-slate-400">נדרשת עקומת למידה גבוהה יותר לניהול הפרומפטים והשרתים החיצוניים.</p>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-3 border border-red-500/20">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3 text-red-400">🛡️</span>
+            <h2 class="text-3xl font-bold">אבטחת סוכנים וניהול סיכונים</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+            <div class="p-5 bg-slate-800/50 rounded-2xl border border-slate-700 hover:border-red-500/50 transition">
+                <h4 class="font-bold text-white mb-2 text-lg">Egress Filtering</h4>
+                <p class="text-slate-400 leading-relaxed">חסימת כל תקשורת יוצאת למעט דומיינים מאושרים (כמו `data.gov.il`). חיוני למניעת דליפת נתונים על ידי סוכנים שקיבלו קלט זדוני.</p>
+            </div>
+            <div class="p-5 bg-slate-800/50 rounded-2xl border border-slate-700 hover:border-brand-primary/50 transition">
+                <h4 class="font-bold text-white mb-2 text-lg">Least Privilege MCP</h4>
+                <p class="text-slate-400 leading-relaxed">שרת ה-Database MCP חייב לקבל הרשאות קריאה (Read-Only) בלבד כאשר מדובר בסוכן אנליסט, למניעת מחיקת טבלאות בשוגג.</p>
+            </div>
+            <div class="p-5 bg-slate-800/50 rounded-2xl border border-slate-700 hover:border-yellow-500/50 transition">
+                <h4 class="font-bold text-white mb-2 text-lg">Human in the Loop</h4>
+                <p class="text-slate-400 leading-relaxed">הגדרת עצירה לאישור אנושי בקבצי ה-SKILL.md לפני ביצוע פעולות קריטיות (כמו שינוי הגדרות שרת או שליחת אימיילים ללקוחות).</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    const apiKey = "";
+    const model = "gemini-2.5-flash-preview-09-2025";
+    let historyData = [];
+
+    function initHistory() {
+        try {
+            const stored = localStorage.getItem('rvDataHistory');
+            if (stored) {
+                historyData = JSON.parse(stored);
+                renderHistory();
+            }
+        } catch (e) {
+            historyData = [];
+        }
+    }
+
+    function saveToHistory(type, input, output, badgeText, badgeColor) {
+        const item = {
+            id: Date.now(),
+            type: type,
+            input: input,
+            output: output,
+            badgeText: badgeText,
+            badgeColor: badgeColor,
+            timestamp: new Date().toLocaleString('he-IL')
+        };
+        historyData.unshift(item);
+        if (historyData.length > 30) {
+            historyData.pop();
+        }
+        try {
+            localStorage.setItem('rvDataHistory', JSON.stringify(historyData));
+        } catch (e) {}
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
+        if (historyData.length === 0) {
+            list.innerHTML = '<div class="text-center text-slate-500 mt-10">אין עדיין היסטוריה.</div>';
+            return;
+        }
+        historyData.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'bg-slate-800/80 p-3 rounded-lg border border-slate-700 hover:border-brand-primary cursor-pointer transition flex flex-col gap-2';
+            div.onclick = () => viewHistoryItem(index);
+            
+            const headerStr = `<div class="flex justify-between items-center"><span class="text-[10px] font-bold px-2 py-0.5 rounded ${item.badgeColor}">${item.badgeText}</span><span class="text-[10px] text-slate-500">${item.timestamp}</span></div>`;
+            const textStr = `<div class="text-xs text-slate-300 truncate font-bold">${item.input}</div>`;
+            
+            div.innerHTML = headerStr + textStr;
+            list.appendChild(div);
+        });
+    }
+
+    function clearHistory() {
+        historyData = [];
+        try {
+            localStorage.removeItem('rvDataHistory');
+        } catch (e) {}
+        renderHistory();
+    }
+
+    function toggleHistory() {
+        const sidebar = document.getElementById('historySidebar');
+        const overlay = document.getElementById('historyOverlay');
+        const isClosed = sidebar.classList.contains('translate-x-full');
+        
+        if (isClosed) {
+            sidebar.classList.remove('translate-x-full');
+            sidebar.classList.add('translate-x-0');
+            overlay.classList.remove('hidden');
+            setTimeout(() => { overlay.classList.add('opacity-100'); overlay.classList.remove('opacity-0'); }, 10);
+        } else {
+            sidebar.classList.add('translate-x-full');
+            sidebar.classList.remove('translate-x-0');
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+        }
+    }
+
+    function viewHistoryItem(index) {
+        const item = historyData[index];
+        toggleHistory();
+        
+        if (item.type === 'claude') {
+            document.getElementById('claudeInput').value = item.input;
+            const outputDiv = document.getElementById('claudeOutput');
+            outputDiv.querySelector('pre').innerText = item.output;
+            outputDiv.classList.remove('hidden');
+            document.getElementById('claudeInput').scrollIntoView({behavior: 'smooth', block: 'center'});
+        } else {
+            document.getElementById('mainPromptInput').value = item.input;
+            const outputDiv = document.getElementById('mainPromptOutput');
+            document.getElementById('outputTypeBadge').innerText = item.badgeText;
+            document.getElementById('outputTypeBadge').className = `text-xs font-black uppercase tracking-widest px-2 py-1 rounded ${item.badgeColor}`;
+            outputDiv.querySelector('pre').innerText = item.output;
+            outputDiv.classList.remove('hidden');
+            document.getElementById('generatorSection').scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+    }
+
+    async function callGemini(prompt, systemInstruction) {
+        let retries = 3;
+        let delay = 1000;
+        const payload = {
+            contents: [{ parts: [{ text: prompt }] }],
+            systemInstruction: { parts: [{ text: systemInstruction }] }
+        };
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('API Error');
+                const result = await response.json();
+                return result.candidates[0].content.parts[0].text;
+            } catch (error) {
+                if (i === retries - 1) return "שגיאה בחיבור ל-API. נסה שוב.";
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+        }
+    }
+
+    async function handleGeneration(type) {
+        const input = document.getElementById('mainPromptInput').value;
+        if (!input.trim()) return;
+        
+        const btnId = `btn-${type}`;
+        const btn = document.getElementById(btnId);
+        const originalHtml = btn.innerHTML;
+        const outputDiv = document.getElementById('mainPromptOutput');
+        const badge = document.getElementById('outputTypeBadge');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loader"></div>';
+        
+        let systemPrompt = "";
+        let promptText = "";
+        let badgeText = "";
+        let badgeColor = "";
+
+        if (type === 'skill') {
+            systemPrompt = "You are an expert Anthropic Claude Code plugin developer. Generate a valid 'SKILL.md' file. Include YAML Frontmatter (name, description), Required MCP Servers, Imperative Workflow/Instructions, and XML Tags (<thinking>, <validation>, <output_format>). Generate ONLY markdown.";
+            promptText = `Create a Claude Code Skill (SKILL.md) for: ${input}`;
+            badgeText = "SKILL.MD FILE";
+            badgeColor = "bg-brand-secondary/20 text-brand-secondary";
+        } else if (type === 'standard') {
+            systemPrompt = "You are an expert Prompt Engineer for Anthropic. Create a robust System Prompt using XML tags (<role>, <context>, <objective>, <rules>).";
+            promptText = `Create a standard XML system prompt for: ${input}`;
+            badgeText = "STANDARD PROMPT";
+            badgeColor = "bg-brand-primary/20 text-brand-primary";
+        } else if (type === 'advanced') {
+            systemPrompt = "You are an expert Security & Architect Prompt Engineer. Create a complex System Prompt using Extended Chain of Thought. Must include <role>, <context>, <task>, <instructions>, <thinking> (for logic breakdown), and <example>. Force the agent to consider edge cases, hallucinations, and performance.";
+            promptText = `Create an advanced Deep Thinking (CoT) system prompt for: ${input}`;
+            badgeText = "DEEP THINKING PROMPT";
+            badgeColor = "bg-purple-500/20 text-purple-400 border border-purple-500/30";
+        }
+
+        badge.innerText = badgeText;
+        badge.className = `text-xs font-black uppercase tracking-widest px-2 py-1 rounded ${badgeColor}`;
+
+        const result = await callGemini(promptText, systemPrompt);
+        
+        outputDiv.querySelector('pre').innerText = result;
+        outputDiv.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+
+        if (!result.includes("שגיאה")) {
+            saveToHistory('generator', input, result, badgeText, badgeColor);
+        }
+    }
+
+    async function handleClaudeGeneration() {
+        const input = document.getElementById('claudeInput').value;
+        if (!input.trim()) return;
+        
+        const btn = document.getElementById('btn-claude');
+        const outputDiv = document.getElementById('claudeOutput');
+        const originalHtml = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<div class="loader"></div> מייצר...';
+        
+        const system = "You are an expert in Claude Code configuration. Create a CLAUDE.md file based on the user tech stack. Include: Recommended MCP servers (`claude mcp add`), Custom skills references, Build/Test commands, and Coding conventions.";
+        const result = await callGemini(`Create CLAUDE.md for: ${input}`, system);
+        
+        outputDiv.querySelector('pre').innerText = result;
+        outputDiv.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+
+        if (!result.includes("שגיאה")) {
+            saveToHistory('claude', input, result, 'CLAUDE.MD', 'bg-green-500/20 text-green-400');
+        }
+    }
+
+    function copyToClipboard(elementId) {
+        const text = document.getElementById(elementId).querySelector('pre').innerText;
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+    }
+
+    function wrapText(text, maxLineLength) {
+        if (!text || typeof text !== 'string') return [text];
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            if ((currentLine + word).length > maxLineLength) {
+                if (currentLine.length > 0) {
+                    lines.push(currentLine.trim());
+                    currentLine = word + ' ';
+                } else {
+                    lines.push(word);
+                    currentLine = '';
+                }
+            } else {
+                currentLine += word + ' ';
+            }
+        }
+        if (currentLine.trim().length > 0) lines.push(currentLine.trim());
+        return lines;
+    }
+
+    function initChart() {
+        const rawLabels = ['קצב פיתוח ומסירה', 'דיוק אנליטי נתונים', 'עלות ממוצעת לריצה', 'יכולת עבודה בקנה מידה', 'מורכבות תחזוקה כוללת'];
+        const processedLabels = rawLabels.map(label => wrapText(label, 16));
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = 'Heebo';
+        
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: processedLabels,
+                datasets: [
+                    {
+                        label: 'סוכן סטנדרטי (Single)',
+                        data: [85, 45, 90, 35, 80],
+                        fill: true,
+                        backgroundColor: 'rgba(217, 70, 239, 0.15)',
+                        borderColor: '#d946ef',
+                        pointBackgroundColor: '#d946ef',
+                        pointBorderColor: '#fff',
+                    },
+                    {
+                        label: 'מערכת MCP + Skills',
+                        data: [60, 95, 40, 90, 30],
+                        fill: true,
+                        backgroundColor: 'rgba(6, 182, 212, 0.25)',
+                        borderColor: '#06b6d4',
+                        pointBackgroundColor: '#06b6d4',
+                        pointBorderColor: '#fff',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: { color: '#e2e8f0', font: { size: 11, weight: '600' } },
+                        ticks: { display: false, min: 0, max: 100 }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#e2e8f0', padding: 20 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#06b6d4',
+                        bodyColor: '#e2e8f0',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const item = tooltipItems[0];
+                                let label = item.chart.data.labels[item.dataIndex];
+                                return Array.isArray(label) ? label.join(' ') : label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initHistory();
+        initChart();
+    });
+</script>
+</body>
+</html>

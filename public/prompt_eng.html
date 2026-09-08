@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agents Expert Cheat Sheet - Anthropic MCP & Skills Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;800&display=swap');
+body {
+    font-family: 'Heebo', sans-serif;
+    background-color: #0f172a;
+    color: #e2e8f0;
+}
+.glass-card {
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+}
+.gradient-text {
+    background: linear-gradient(to left, #06b6d4, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.ai-input {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    color: #fff;
+    transition: all 0.3s ease;
+}
+.ai-input:focus {
+    border-color: #06b6d4;
+    outline: none;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+.loader {
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid #06b6d4;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+.history-item {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    transition: border-color 0.2s ease;
+}
+.history-item:hover {
+    border-color: rgba(6, 182, 212, 0.3);
+}
+</style>
+<script>
+tailwind.config = {
+    theme: {
+        extend: {
+            colors: {
+                brand: {
+                    dark: '#0f172a',
+                    card: '#1e293b',
+                    primary: '#06b6d4',
+                    secondary: '#8b5cf6',
+                    accent: '#3b82f6'
+                }
+            }
+        }
+    }
+}
+</script>
+</head>
+<body class="antialiased min-h-screen pb-12">
+
+<!-- RV-DATA Watermark -->
+<div class="fixed top-4 left-4 z-50 bg-slate-900/60 backdrop-blur-md border border-brand-primary/30 text-brand-primary font-black px-4 py-1.5 rounded-full text-xs tracking-[0.2em] shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+    RV-DATA
+</div>
+
+<header class="pt-16 pb-12 px-4 text-center relative overflow-hidden">
+    <div class="absolute inset-0 z-0 opacity-20" style="background-image: radial-gradient(circle at center, #8b5cf6 1px, transparent 1px); background-size: 24px 24px;"></div>
+    <div class="relative z-10 max-w-5xl mx-auto">
+        <div class="inline-block p-3 rounded-2xl bg-brand-secondary/20 text-brand-secondary text-4xl mb-4">🧠</div>
+        <h1 class="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">Anthropic <span class="gradient-text">Skills & MCP</span></h1>
+        <p class="text-xl text-slate-400 max-w-3xl mx-auto">סביבת העבודה הרשמית ליצירת הרחבות (Plugins), שרתי הקשר (MCP) וכישורים (Skills) עבור Claude Code.</p>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+    <!-- Information Section: MCP & Skills -->
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-3 border border-brand-secondary/30">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3">🔌</span>
+            <h2 class="text-3xl font-bold">הארכיטקטורה החדשה: MCP ו-Skills</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-slate-800/80 p-6 rounded-2xl border-r-4 border-brand-primary">
+                <h3 class="text-xl font-bold text-white mb-2">Model Context Protocol (MCP)</h3>
+                <p class="text-slate-400 text-sm mb-4">תקן פתוח לחיבור Claude למקורות מידע וכלים חיצוניים. במקום לכתוב קוד אינטגרציה לכל API, אנו משתמשים בשרתי MCP מובנים המוגדרים בקובץ <code class="text-brand-primary">.mcp.json</code>.</p>
+                <ul class="text-sm text-slate-300 space-y-2">
+                    <li>🔹 <strong>הגדרה:</strong> הוספה באמצעות <code class="bg-slate-900 px-1 rounded">claude mcp add</code>.</li>
+                    <li>🔹 <strong>דוגמאות:</strong> Fetcher, Playwright, Database, Filesystem.</li>
+                    <li>🔹 <strong>יעילות:</strong> נטען On-Demand כדי לחסוך טוקנים ב-Context Window.</li>
+                </ul>
+            </div>
+            
+            <div class="bg-slate-800/80 p-6 rounded-2xl border-r-4 border-brand-secondary">
+                <h3 class="text-xl font-bold text-white mb-2">Claude Skills (SKILL.md)</h3>
+                <p class="text-slate-400 text-sm mb-4">מודולים המעניקים ל-Claude ידע תהליכי (Procedural Knowledge). ממוקמים תחת <code class="text-brand-secondary">~/.claude/skills/</code> ומאפשרים ל-Claude לבצע משימות ספציפיות באופן עצמאי.</p>
+                <ul class="text-sm text-slate-300 space-y-2">
+                    <li>🔸 <strong>מבנה:</strong> דורש Frontmatter (שם ותיאור) כדי להיטען נכון.</li>
+                    <li>🔸 <strong>סגנון כתיבה:</strong> ציווי (Imperative) - "עשה X", "בדוק Y", לא "כדאי שתעשה".</li>
+                    <li>🔸 <strong>גילוי אוטומטי:</strong> Claude מחפש את התיאור וטוען את הכישרון כשהמשתמש מבקש.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Prompt & Skill Generator -->
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-2 border border-brand-primary/20">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3">🛠️</span>
+            <h2 class="text-3xl font-bold">מחולל מיומנויות (Skill Creator)</h2>
+        </div>
+        
+        <div class="flex flex-col space-y-4">
+            <p class="text-sm text-slate-400">תאר את התהליך העסקי או האנליטי. המערכת תייצר עבורך קובץ <code>SKILL.md</code> תקני המשלב תגיות XML של Anthropic ודרישות שרתי MCP רלוונטיות לתחום.</p>
+            <textarea id="promptInput" class="ai-input rounded-xl p-4 w-full h-24 resize-none" placeholder="למשל: יצירת תוכנית אימונים לטריאתלון המבוססת על מדדי דופק שבועיים מקבצי אקסל..."></textarea>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button onclick="generateSkill()" id="skillBtn" class="bg-brand-secondary hover:bg-brand-secondary/80 text-white font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm">
+                    <span>📦 צור קובץ SKILL.md</span>
+                </button>
+                <button onclick="generateSystemPrompt('standard')" id="sysPromptBtn" class="bg-brand-primary hover:bg-brand-primary/80 text-slate-900 font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm">
+                    <span>✨ פרומפט סוכן רגיל</span>
+                </button>
+                <button onclick="generateSystemPrompt('advanced')" id="sysPromptBtnAdv" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-2 rounded-xl transition flex items-center justify-center text-sm">
+                    <span>🚀 חשיבה מעמיקה (CoT)</span>
+                </button>
+            </div>
+
+            <div id="promptOutput" class="hidden mt-4 bg-slate-900/80 p-6 rounded-2xl border border-brand-primary/30 text-sm font-mono overflow-auto max-h-[500px] relative group">
+                <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                    <span id="outputTypeLabel" class="text-xs text-brand-primary font-bold uppercase tracking-widest">OUTPUT</span>
+                    <button onclick="copyToClipboard('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">העתק הכל</button>
+                </div>
+                <pre class="whitespace-pre-wrap text-slate-300"></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- CLAUDE.md Generator -->
+    <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1">
+        <div class="flex items-center mb-6">
+            <span class="text-3xl mr-3">🗂️</span>
+            <h2 class="text-2xl font-bold text-white">הגדרת פרויקט (CLAUDE.md)</h2>
+        </div>
+        <p class="text-slate-400 mb-4 text-sm leading-relaxed">הגדר כללים גלובליים לפרויקט, כולל שילובי MCP הנדרשים. קובץ זה יקשר בין ה-Skills שלך לסביבת הריצה ב-VS Code.</p>
+        <textarea id="claudeInput" class="ai-input rounded-xl p-4 w-full h-24 mb-4 resize-none" placeholder="טכנולוגיות וכללים: Python, GTFS, דרישה לשרת MCP של בסיס נתונים..."></textarea>
+        <button onclick="generateClaudeMd()" id="claudeBtn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition">
+            ✨ הפק CLAUDE.md
+        </button>
+        <div id="claudeOutput" class="hidden mt-4 bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-xs font-mono overflow-auto max-h-64 relative group">
+            <button onclick="copyToClipboard('claudeOutput')" class="absolute top-2 left-2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded">Copy</button>
+            <pre class="whitespace-pre-wrap text-green-400"></pre>
+        </div>
+    </section>
+
+</main>
+
+<!-- History Section -->
+<section class="max-w-7xl mx-auto px-4 mt-8">
+    <div class="glass-card rounded-3xl p-8 shadow-2xl border border-slate-700/50">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <span class="text-3xl mr-3">🕓</span>
+                <h2 class="text-2xl font-bold">היסטוריית פרומפטים</h2>
+            </div>
+            <button onclick="clearAllHistory()" class="bg-red-900/40 hover:bg-red-800/60 text-red-400 text-xs font-bold px-4 py-2 rounded-xl transition border border-red-800/40">
+                נקה הכל
+            </button>
+        </div>
+        <div id="historyList" class="space-y-3">
+            <p id="historyEmpty" class="text-slate-500 text-sm text-center py-6">אין היסטוריה שמורה עדיין.</p>
+        </div>
+    </div>
+</section>
+
+<script>
+    const MAX_PROMPT_LENGTH = 3200;
+    const MAX_CLAUDE_LENGTH = 1400;
+    const HISTORY_KEY = 'promptEngineHistory';
+
+    function saveToHistory(type, label, input, output) {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        history.unshift({
+            id: Date.now().toString(),
+            timestamp: new Date().toISOString(),
+            type,
+            label,
+            input,
+            output
+        });
+        if (history.length > 50) history.pop();
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        renderHistory();
+    }
+
+    function loadHistory() {
+        return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    }
+
+    function renderHistory() {
+        const history = loadHistory();
+        const container = document.getElementById('historyList');
+        const empty = document.getElementById('historyEmpty');
+
+        if (history.length === 0) {
+            empty.style.display = 'block';
+            const existing = container.querySelectorAll('.history-item');
+            existing.forEach(el => el.remove());
+            return;
+        }
+
+        empty.style.display = 'none';
+        const existing = container.querySelectorAll('.history-item');
+        existing.forEach(el => el.remove());
+
+        history.forEach(item => {
+            const date = new Date(item.timestamp);
+            const dateStr = date.toLocaleDateString('he-IL') + ' ' + date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+            const preview = item.input.length > 80 ? item.input.slice(0, 80) + '…' : item.input;
+
+            const typeColors = {
+                skill: 'text-brand-secondary bg-brand-secondary/10 border-brand-secondary/30',
+                standard: 'text-brand-primary bg-brand-primary/10 border-brand-primary/30',
+                advanced: 'text-indigo-400 bg-indigo-900/20 border-indigo-600/30',
+                claudeMd: 'text-green-400 bg-green-900/20 border-green-700/30'
+            };
+            const badgeClass = typeColors[item.type] || 'text-slate-400 bg-slate-800 border-slate-600';
+
+            const div = document.createElement('div');
+            div.className = 'history-item rounded-2xl p-4 flex items-start gap-4';
+            div.innerHTML = `
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">${item.label}</span>
+                        <span class="text-slate-500 text-xs">${dateStr}</span>
+                    </div>
+                    <p class="text-slate-300 text-sm truncate">${preview}</p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button onclick="restoreHistoryItem('${item.id}')" class="bg-brand-primary/20 hover:bg-brand-primary/40 text-brand-primary text-xs px-3 py-1.5 rounded-lg transition font-bold">שחזר</button>
+                    <button onclick="deleteHistoryItem('${item.id}')" class="bg-slate-700/60 hover:bg-red-900/40 text-slate-400 hover:text-red-400 text-xs px-3 py-1.5 rounded-lg transition">✕</button>
+                </div>`;
+            container.appendChild(div);
+        });
+    }
+
+    function restoreHistoryItem(id) {
+        const history = loadHistory();
+        const item = history.find(h => h.id === id);
+        if (!item) return;
+
+        if (item.type === 'claudeMd') {
+            document.getElementById('claudeInput').value = item.input;
+            const outputDiv = document.getElementById('claudeOutput');
+            outputDiv.querySelector('pre').textContent = item.output;
+            outputDiv.classList.remove('hidden');
+            outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            document.getElementById('promptInput').value = item.input;
+            const outputDiv = document.getElementById('promptOutput');
+            const label = document.getElementById('outputTypeLabel');
+            const labelMap = { skill: 'SKILL.md FILE', standard: 'SYSTEM PROMPT (XML BASED)', advanced: 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)' };
+            label.textContent = labelMap[item.type] || item.label;
+            outputDiv.querySelector('pre').textContent = item.output;
+            outputDiv.classList.remove('hidden');
+            outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function deleteHistoryItem(id) {
+        const history = loadHistory().filter(h => h.id !== id);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        renderHistory();
+    }
+
+    function clearAllHistory() {
+        if (!confirm('למחוק את כל ההיסטוריה?')) return;
+        localStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+    }
+
+    function setAllControlsDisabled(isDisabled) {
+        document.getElementById('skillBtn').disabled = isDisabled;
+        document.getElementById('sysPromptBtn').disabled = isDisabled;
+        document.getElementById('sysPromptBtnAdv').disabled = isDisabled;
+        document.getElementById('claudeBtn').disabled = isDisabled;
+    }
+
+    function sanitizePrompt(text) {
+        return text.replace(/[\\u0000-\\u001F\\u007F-\\u009F]/g, "").trim();
+    }
+
+    function validatePrompt(text, maxLength) {
+        if (!text) return 'Input is empty.';
+        if (text.length > maxLength) return `Input exceeds ${maxLength} characters.`;
+        return null;
+    }
+
+    function showOutput(outputDiv, message, isError = false) {
+        const outputPre = outputDiv.querySelector('pre');
+        outputPre.textContent = message;
+        outputPre.classList.toggle('text-red-400', isError);
+        outputDiv.classList.remove('hidden');
+    }
+
+    async function sendGenerateRequest(payload) {
+        const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!response.ok || result.error) {
+            throw new Error(result.error || `Server returned ${response.status}`);
+        }
+        return result.text;
+    }
+
+    async function runRequest(btn, outputDiv, callback) {
+        const originalText = btn.innerHTML;
+        setAllControlsDisabled(true);
+        btn.innerHTML = '<div class="loader"></div>';
+
+        try {
+            await callback();
+        } catch (error) {
+            console.error('Request failed:', error);
+            showOutput(outputDiv, `Error: ${error.message}`, true);
+        } finally {
+            btn.innerHTML = originalText;
+            setAllControlsDisabled(false);
+        }
+    }
+
+    async function generateSkill() {
+        const input = sanitizePrompt(document.getElementById('promptInput').value);
+        const validationError = validatePrompt(input, MAX_PROMPT_LENGTH);
+        const outputDiv = document.getElementById('promptOutput');
+
+        if (validationError) {
+            showOutput(outputDiv, validationError, true);
+            return;
+        }
+
+        const btn = document.getElementById('skillBtn');
+        document.getElementById('outputTypeLabel').textContent = 'SKILL.md FILE (ANTHROPIC STANDARD)';
+        document.getElementById('outputTypeLabel').className = 'text-xs text-brand-secondary font-bold uppercase tracking-widest';
+
+        await runRequest(btn, outputDiv, async () => {
+            const system = `You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.`;
+
+            const prompt = `Create a Claude Code Skill (SKILL.md) for the following task:\n${input}`;
+            const result = await sendGenerateRequest({ prompt, systemInstruction: system });
+
+            if (!result.includes('name:') || !result.includes('description:')) {
+                throw new Error('Generated SKILL.md failed validation. Please simplify the task and try again.');
+            }
+
+            showOutput(outputDiv, result, false);
+            saveToHistory('skill', 'SKILL.md', input, result);
+        });
+    }
+
+    async function generateSystemPrompt(mode = 'standard') {
+        const input = sanitizePrompt(document.getElementById('promptInput').value);
+        const validationError = validatePrompt(input, MAX_PROMPT_LENGTH);
+        const outputDiv = document.getElementById('promptOutput');
+
+        if (validationError) {
+            showOutput(outputDiv, validationError, true);
+            return;
+        }
+
+        const btn = mode === 'advanced' ? document.getElementById('sysPromptBtnAdv') : document.getElementById('sysPromptBtn');
+
+        if (mode === 'advanced') {
+            document.getElementById('outputTypeLabel').textContent = 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)';
+            document.getElementById('outputTypeLabel').className = 'text-xs text-brand-secondary font-bold uppercase tracking-widest';
+        } else {
+            document.getElementById('outputTypeLabel').textContent = 'SYSTEM PROMPT (XML BASED)';
+            document.getElementById('outputTypeLabel').className = 'text-xs text-brand-primary font-bold uppercase tracking-widest';
+        }
+
+        await runRequest(btn, outputDiv, async () => {
+            const system = mode === 'advanced'
+                ? `You are an expert Prompt Engineer for Anthropic models. Create an advanced, high-performance system prompt designed for complex reasoning. You must enforce a rigorous multi-step Chain of Thought reasoning style. Use XML tags including: <role>, <context>, <thinking>, <error_handling>, <validation_checklists>, <response_format>. Instruct the model to think step-by-step and show its work in Hebrew, but keep structural variables in English.`
+                : `You are an expert Prompt Engineer for Anthropic models. Create a robust System Prompt using Anthropic's XML tag methodology. Include tags like <role>, <context>, <objective>, <tools_and_mcp>, <rules>, and <response_format>. Ensure the prompt clearly instructs the model to use <thinking> before acting.`;
+
+            const prompt = mode === 'advanced'
+                ? `Create a deep-reasoning, advanced system prompt with extended Chain of Thought for: ${input}`
+                : `Create a system prompt for: ${input}`;
+
+            const result = await sendGenerateRequest({ prompt, systemInstruction: system });
+            showOutput(outputDiv, result, false);
+            const histLabel = mode === 'advanced' ? 'Deep Thinking' : 'System Prompt';
+            saveToHistory(mode, histLabel, input, result);
+        });
+    }
+
+    async function generateClaudeMd() {
+        const input = sanitizePrompt(document.getElementById('claudeInput').value);
+        const validationError = validatePrompt(input, MAX_CLAUDE_LENGTH);
+        const outputDiv = document.getElementById('claudeOutput');
+        const btn = document.getElementById('claudeBtn');
+
+        if (validationError) {
+            showOutput(outputDiv, validationError, true);
+            return;
+        }
+
+        await runRequest(btn, outputDiv, async () => {
+            const system = `You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions.`;
+            const prompt = `Create CLAUDE.md for: ${input}`;
+            const result = await sendGenerateRequest({ prompt, systemInstruction: system });
+
+            const normalized = result.toLowerCase();
+            if (!normalized.includes('mcp') || !normalized.includes('build') || !normalized.includes('skill')) {
+                console.warn('Generated CLAUDE.md did not mention all of "mcp", "build", and "skill" — this is expected for non-MCP or minimal projects. Showing output anyway.');
+            }
+
+            showOutput(outputDiv, result, false);
+            saveToHistory('claudeMd', 'CLAUDE.md', input, result);
+            btn.innerHTML = '✨ הפק CLAUDE.md';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', renderHistory);
+
+    async function copyToClipboard(elementId) {
+        const text = document.getElementById(elementId).querySelector('pre').textContent;
+        try {
+            await navigator.clipboard.writeText(text);
+            alert('התוכן הועתק בהצלחה!');
+        } catch (error) {
+            console.error('Clipboard error:', error);
+            alert('Unable to copy to clipboard. Please try again.');
+        }
+    }
+</script>
+</body>
+</html>
+
