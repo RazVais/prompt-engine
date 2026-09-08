@@ -91,6 +91,23 @@ is not reachable from the browser.
 | `public/ai_agents_expert_cheat_sheet.html` | Standalone reference page, not connected to the server |
 | `CLAUDE.md` | Guidance for Claude Code working in this repo |
 | `IMPROVEMENTS.md` | Known issues and ideas for future work |
+| `.claude/skills/` | Skill library, refreshed monthly (see below) |
+| `tools/skills-refresh.md` | Instructions the monthly refresh routine follows |
+| `tools/sync-skills.ps1` / `.sh` | Copy the repo's skills into `~/.claude/skills/` |
+
+## Monthly skills refresh
+
+A scheduled cloud agent (a Claude Code *routine*) runs once a month, researches
+the last ~6 weeks of changes from Anthropic, OpenAI, xAI, and Google, writes or
+updates `SKILL.md` files under `.claude/skills/`, and opens a pull request for
+review. Nothing lands until you merge.
+
+- **Set it up:** in Claude Code, run `/schedule` and point a monthly routine at
+  `tools/skills-refresh.md` (target: this repo). See that file for the full brief.
+- **After merging a refresh PR:** `git pull`, then run `pwsh tools/sync-skills.ps1`
+  (or `bash tools/sync-skills.sh`) to make the new skills available in every
+  Claude Code session on your machine. Skills in `.claude/skills/` are already
+  available automatically to sessions opened *in this repo*.
 
 ## Notes
 

@@ -50,6 +50,12 @@ or delete them as they land.
 - [x] **Add a "download as file" button.** _(done 2026-09-08)_ Both output panels
   have a הורד button. Filenames: skill → `SKILL.md`, standard prompt →
   `system-prompt.md`, CoT prompt → `system-prompt-cot.md`, `CLAUDE.md` → `CLAUDE.md`.
+- [x] **Monthly skills refresh.** _(added 2026-09-08)_ `tools/skills-refresh.md`
+  is the brief for a scheduled cloud routine that researches recent Anthropic /
+  OpenAI / xAI / Google changes, writes `SKILL.md` files under `.claude/skills/`,
+  and opens a review PR. `tools/sync-skills.*` pushes merged skills to
+  `~/.claude/skills/`. Still to do: actually create the routine via `/schedule`,
+  and consider a SessionStart hook that runs the sync automatically.
 - [ ] Stream provider responses so long generations show progress.
 - [ ] Export / import history as JSON.
 - [ ] English UI toggle alongside the Hebrew default.
