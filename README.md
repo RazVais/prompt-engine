@@ -7,18 +7,23 @@ Anthropic-style authoring files:
 - **Agent system prompt** – standard XML-structured, or an extended Chain-of-Thought variant
 - **`CLAUDE.md`** – a project configuration file with MCP / skills / build sections
 
-The interface is in Hebrew (right-to-left). Text generation is done by Google
-Gemini, called through a small local proxy server.
+The interface is in Hebrew (right-to-left). Text generation runs through one of
+four LLM providers — **Google Gemini, Anthropic Claude, OpenAI, or xAI Grok** —
+called through a small local proxy server. A provider shows up in the UI only
+when its API key is configured.
 
-**Each person runs their own copy with their own free Gemini API key.** No key is
-bundled with this project, and the key never reaches the browser — it stays in
-your local `.env` and is used only by the server on your machine.
+**Each person runs their own copy with their own API key(s).** No key is bundled
+with this project, and keys never reach the browser — they stay in your local
+`.env` and are used only by the server on your machine.
 
 ## Requirements
 
 - Node.js 18 or newer ([nodejs.org](https://nodejs.org))
-- A Google Gemini API key — free at https://aistudio.google.com/apikey
-  (sign in with a Google account, click **Create API key**, copy the string)
+- At least one provider API key:
+  - **Google Gemini** — free at https://aistudio.google.com/apikey
+  - **Anthropic Claude** — https://console.anthropic.com/
+  - **OpenAI** — https://platform.openai.com/api-keys
+  - **xAI Grok** — https://console.x.ai/
 
 ## Setup
 
@@ -34,14 +39,15 @@ your local `.env` and is used only by the server on your machine.
    cp .env.example .env        # Windows PowerShell: copy .env.example .env
    ```
 
-   Then open `.env` and paste your key into the `GEMINI_API_KEY=` line.
+   Then open `.env` and paste your key(s) into the matching line(s):
+   `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`.
 
-   Only `GEMINI_API_KEY` is required; the other values have working defaults.
-   `.env` is git-ignored — it is never committed or shared. `GEMINI_MODEL` is the
-   single source of truth for the model (the frontend does not send one).
-   `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` control the per-IP fixed-window rate
-   limit on `POST /api/generate` (default: 20 requests per 60000 ms; a 429 with a
-   `Retry-After` header is returned when exceeded).
+   At least one provider key is required; unconfigured providers are disabled in
+   the UI. The other values have working defaults. `.env` is git-ignored — it is
+   never committed or shared. `GEMINI_MODEL` optionally overrides Gemini's
+   default model. `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` control the per-IP
+   fixed-window rate limit on `POST /api/generate` (default: 20 requests per
+   60000 ms; a 429 with a `Retry-After` header is returned when exceeded).
 
 ## Run
 
@@ -59,21 +65,28 @@ is not reachable from the browser.
 
 ## How to use
 
-1. Type a description of your task in the main box (e.g. "build a weekly triathlon
+1. In **הגדרות יצירה** (Generation settings) at the top, pick the provider, model,
+   temperature, and max tokens. Only providers with a configured key are
+   selectable; the model box accepts any model ID (not just the suggestions).
+   The temperature control is hidden for Anthropic (current Claude models don't
+   take one). Your choices are remembered in the browser.
+2. Type a description of your task in the main box (e.g. "build a weekly triathlon
    training plan from heart-rate data in Excel files").
-2. Click one of:
+3. Click one of:
    - **צור קובץ SKILL.md** – generate a skill file
    - **פרומפט סוכן רגיל** – generate a standard agent system prompt
    - **חשיבה מעמיקה (CoT)** – generate a deep-reasoning system prompt
-3. For a project config file, use the smaller **CLAUDE.md** box on the right.
-4. Every result is saved to browser history (last 50). Use **שחזר** to restore one,
+4. For a project config file, use the smaller **CLAUDE.md** box on the right.
+5. Use **העתק הכל** to copy or **הורד** to download the result as a correctly named
+   file (`SKILL.md`, `system-prompt.md`, `system-prompt-cot.md`, `CLAUDE.md`).
+6. Every result is saved to browser history (last 50). Use **שחזר** to restore one,
    or **נקה הכל** to wipe history. History lives only in your browser.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `server.js` | Express server: serves `public/`, proxies `POST /api/generate` to Gemini, rate-limits it |
+| `server.js` | Express server: serves `public/`, exposes `GET /api/providers`, proxies `POST /api/generate` to the chosen provider (Gemini / Claude / OpenAI / Grok), rate-limits it |
 | `public/prompt_eng.html` | The generator app (UI + all logic, single file) |
 | `public/ai_agents_expert_cheat_sheet.html` | Standalone reference page, not connected to the server |
 | `CLAUDE.md` | Guidance for Claude Code working in this repo |
@@ -81,6 +94,6 @@ is not reachable from the browser.
 
 ## Notes
 
-- The server retries failed Gemini calls up to 5 times with exponential backoff.
+- The server retries failed upstream provider calls up to 5 times with exponential backoff.
 - Only `public/` is served. Put browser-facing files there; keep secrets and
   scratch files in the repo root, which is not exposed.

@@ -102,6 +102,34 @@ tailwind.config = {
 
 <main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
 
+    <!-- Generation Settings -->
+    <section id="settingsPanel" class="glass-card rounded-3xl p-6 shadow-2xl col-span-1 lg:col-span-3 border border-brand-primary/20">
+        <div class="flex items-center mb-4">
+            <span class="text-2xl mr-3">⚙️</span>
+            <h2 class="text-xl font-bold">הגדרות יצירה</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="flex flex-col gap-1.5">
+                <label for="providerSelect" class="text-xs font-bold text-slate-400">ספק</label>
+                <select id="providerSelect" class="ai-input rounded-xl p-2.5 w-full text-sm"></select>
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label for="modelInput" class="text-xs font-bold text-slate-400">מודל</label>
+                <input id="modelInput" list="modelOptions" autocomplete="off" class="ai-input rounded-xl p-2.5 w-full text-sm">
+                <datalist id="modelOptions"></datalist>
+            </div>
+            <div id="tempControl" class="flex flex-col gap-1.5">
+                <label for="tempRange" class="text-xs font-bold text-slate-400">טמפרטורה <span id="tempReadout" class="text-brand-primary font-mono">0</span></label>
+                <input type="range" id="tempRange" min="0" max="2" step="0.1" value="0" class="w-full accent-brand-primary mt-2">
+            </div>
+            <div class="flex flex-col gap-1.5">
+                <label for="maxTokensInput" class="text-xs font-bold text-slate-400">אורך מקסימלי (טוקנים)</label>
+                <input type="number" id="maxTokensInput" class="ai-input rounded-xl p-2.5 w-full text-sm">
+            </div>
+        </div>
+        <p id="settingsNote" class="hidden text-xs text-amber-400 mt-3"></p>
+    </section>
+
     <!-- Information Section: MCP & Skills -->
     <section class="glass-card rounded-3xl p-8 shadow-2xl col-span-1 lg:col-span-3 border border-brand-secondary/30">
         <div class="flex items-center mb-6">
@@ -157,7 +185,10 @@ tailwind.config = {
             <div id="promptOutput" class="hidden mt-4 bg-slate-900/80 p-6 rounded-2xl border border-brand-primary/30 text-sm font-mono overflow-auto max-h-[500px] relative group">
                 <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
                     <span id="outputTypeLabel" class="text-xs text-brand-primary font-bold uppercase tracking-widest">OUTPUT</span>
-                    <button onclick="copyToClipboard('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">העתק הכל</button>
+                    <div class="flex gap-2">
+                        <button onclick="copyToClipboard('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">העתק הכל</button>
+                        <button onclick="downloadPanel('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition">הורד</button>
+                    </div>
                 </div>
                 <pre class="whitespace-pre-wrap text-slate-300"></pre>
             </div>
@@ -176,7 +207,10 @@ tailwind.config = {
             ✨ הפק CLAUDE.md
         </button>
         <div id="claudeOutput" class="hidden mt-4 bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-xs font-mono overflow-auto max-h-64 relative group">
-            <button onclick="copyToClipboard('claudeOutput')" class="absolute top-2 left-2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded">Copy</button>
+            <div class="absolute top-2 left-2 flex gap-2 z-10">
+                <button onclick="copyToClipboard('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">Copy</button>
+                <button onclick="downloadPanel('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">הורד</button>
+            </div>
             <pre class="whitespace-pre-wrap text-green-400"></pre>
         </div>
     </section>
@@ -205,17 +239,213 @@ tailwind.config = {
     const MAX_PROMPT_LENGTH = 3200;
     const MAX_CLAUDE_LENGTH = 1400;
     const HISTORY_KEY = 'promptEngineHistory';
+    const SETTINGS_KEY = 'promptEngineSettings';
+
+    // Generation-settings state
+    let providersData = null;
+    let settingsAvailable = false;
+    // Current output kind for #promptOutput: 'skill' | 'standard' | 'advanced'
+    let currentPromptKind = null;
+
+    function loadSettings() {
+        try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); }
+        catch (e) { return null; }
+    }
+
+    function saveSettings() {
+        if (!settingsAvailable) return;
+        const data = {
+            provider: document.getElementById('providerSelect').value,
+            model: document.getElementById('modelInput').value.trim()
+        };
+        const mt = parseInt(document.getElementById('maxTokensInput').value, 10);
+        if (Number.isFinite(mt)) data.maxTokens = mt;
+        if (!document.getElementById('tempControl').classList.contains('hidden')) {
+            const t = parseFloat(document.getElementById('tempRange').value);
+            if (Number.isFinite(t)) data.temperature = t;
+        }
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (e) {}
+    }
+
+    function getGenerationSettings() {
+        if (!settingsAvailable) return {};
+        const out = {};
+        const provider = document.getElementById('providerSelect').value;
+        const model = document.getElementById('modelInput').value.trim();
+        const maxTokens = parseInt(document.getElementById('maxTokensInput').value, 10);
+        if (provider) out.provider = provider;
+        if (model) out.model = model;
+        if (Number.isFinite(maxTokens)) out.maxTokens = maxTokens;
+        if (!document.getElementById('tempControl').classList.contains('hidden')) {
+            const t = parseFloat(document.getElementById('tempRange').value);
+            if (Number.isFinite(t)) out.temperature = t;
+        }
+        return out;
+    }
+
+    function clamp(val, min, max) {
+        return Math.min(max, Math.max(min, val));
+    }
+
+    function applyProvider(p) {
+        const saved = loadSettings();
+        const savedForThis = (saved && saved.provider === p.id) ? saved : null;
+
+        const dl = document.getElementById('modelOptions');
+        dl.innerHTML = '';
+        (p.models || []).forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            dl.appendChild(opt);
+        });
+
+        document.getElementById('modelInput').value =
+            (savedForThis && savedForThis.model) || p.defaultModel || '';
+
+        const tempControl = document.getElementById('tempControl');
+        if (p.temperature == null) {
+            tempControl.classList.add('hidden');
+        } else {
+            tempControl.classList.remove('hidden');
+            const range = document.getElementById('tempRange');
+            range.min = p.temperature.min;
+            range.max = p.temperature.max;
+            range.step = p.temperature.step || 0.1;
+            let tv = (savedForThis && typeof savedForThis.temperature === 'number')
+                ? savedForThis.temperature : p.temperature.default;
+            tv = clamp(tv, p.temperature.min, p.temperature.max);
+            range.value = tv;
+            document.getElementById('tempReadout').textContent = tv;
+        }
+
+        const mt = document.getElementById('maxTokensInput');
+        mt.min = p.maxTokens.min;
+        mt.max = p.maxTokens.max;
+        let mtv = (savedForThis && typeof savedForThis.maxTokens === 'number')
+            ? savedForThis.maxTokens : p.maxTokens.default;
+        mtv = clamp(mtv, p.maxTokens.min, p.maxTokens.max);
+        mt.value = mtv;
+    }
+
+    function disableSettingsPanel(message) {
+        settingsAvailable = false;
+        const panel = document.getElementById('settingsPanel');
+        panel.querySelectorAll('select, input').forEach(el => { el.disabled = true; });
+        panel.classList.add('opacity-60');
+        const note = document.getElementById('settingsNote');
+        note.textContent = message;
+        note.classList.remove('hidden');
+    }
+
+    async function initSettings() {
+        let data;
+        try {
+            const res = await fetch('/api/providers');
+            if (!res.ok) throw new Error('status ' + res.status);
+            data = await res.json();
+        } catch (err) {
+            console.error('Providers fetch failed:', err);
+            disableSettingsPanel('לא ניתן לטעון הגדרות ספק — היצירה תשתמש בברירות המחדל של השרת.');
+            return;
+        }
+
+        const providers = (data && data.providers) || [];
+        if (!providers.length) {
+            disableSettingsPanel('לא נמצאו ספקים זמינים — היצירה תשתמש בברירות המחדל של השרת.');
+            return;
+        }
+
+        providersData = data;
+        const byId = id => providers.find(p => p.id === id);
+
+        const sel = document.getElementById('providerSelect');
+        sel.innerHTML = '';
+        providers.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.available ? p.label : (p.label + ' — אין מפתח API');
+            if (!p.available) opt.disabled = true;
+            sel.appendChild(opt);
+        });
+
+        const saved = loadSettings();
+        let chosen;
+        if (saved && saved.provider && byId(saved.provider) && byId(saved.provider).available) {
+            chosen = byId(saved.provider);
+        } else if (byId(data.defaultProvider) && byId(data.defaultProvider).available) {
+            chosen = byId(data.defaultProvider);
+        } else {
+            chosen = providers.find(p => p.available) || providers[0];
+        }
+
+        sel.value = chosen.id;
+        settingsAvailable = true;
+        applyProvider(chosen);
+        saveSettings();
+
+        sel.addEventListener('change', () => {
+            const p = byId(sel.value);
+            if (p) { applyProvider(p); saveSettings(); }
+        });
+        document.getElementById('modelInput').addEventListener('input', saveSettings);
+        document.getElementById('maxTokensInput').addEventListener('input', saveSettings);
+        document.getElementById('tempRange').addEventListener('input', () => {
+            document.getElementById('tempReadout').textContent = document.getElementById('tempRange').value;
+            saveSettings();
+        });
+    }
+
+    function applyRestoredSettings(s) {
+        if (!settingsAvailable || !s) return;
+        const sel = document.getElementById('providerSelect');
+        if (s.provider && providersData) {
+            const p = (providersData.providers || []).find(x => x.id === s.provider);
+            const opt = Array.from(sel.options).find(o => o.value === s.provider && !o.disabled);
+            if (p && opt) {
+                sel.value = s.provider;
+                applyProvider(p);
+            }
+        }
+        if (s.model) document.getElementById('modelInput').value = s.model;
+        saveSettings();
+    }
+
+    function downloadText(filename, text) {
+        const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function downloadPanel(elementId) {
+        const pre = document.getElementById(elementId).querySelector('pre');
+        const text = pre ? pre.textContent : '';
+        if (!text || !text.trim()) return;
+        let filename = 'CLAUDE.md';
+        if (elementId === 'promptOutput') {
+            const map = { skill: 'SKILL.md', standard: 'system-prompt.md', advanced: 'system-prompt-cot.md' };
+            filename = map[currentPromptKind] || 'output.md';
+        }
+        downloadText(filename, text);
+    }
 
     function saveToHistory(type, label, input, output) {
         const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-        history.unshift({
+        const gs = getGenerationSettings();
+        const entry = {
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
             type,
             label,
             input,
             output
-        });
+        };
+        if (gs.provider || gs.model) {
+            entry.settings = { provider: gs.provider, model: gs.model };
+        }
+        history.unshift(entry);
         if (history.length > 50) history.pop();
         localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
         renderHistory();
@@ -254,6 +484,10 @@ tailwind.config = {
             };
             const badgeClass = typeColors[item.type] || 'text-slate-400 bg-slate-800 border-slate-600';
 
+            const settingsTag = (item.settings && (item.settings.provider || item.settings.model))
+                ? `<span class="text-slate-500 text-[10px] font-mono">${[item.settings.provider, item.settings.model].filter(Boolean).join(' · ')}</span>`
+                : '';
+
             const div = document.createElement('div');
             div.className = 'history-item rounded-2xl p-4 flex items-start gap-4';
             div.innerHTML = `
@@ -261,6 +495,7 @@ tailwind.config = {
                     <div class="flex items-center gap-2 mb-1 flex-wrap">
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeClass}">${item.label}</span>
                         <span class="text-slate-500 text-xs">${dateStr}</span>
+                        ${settingsTag}
                     </div>
                     <p class="text-slate-300 text-sm truncate">${preview}</p>
                 </div>
@@ -277,6 +512,8 @@ tailwind.config = {
         const item = history.find(h => h.id === id);
         if (!item) return;
 
+        if (item.settings) applyRestoredSettings(item.settings);
+
         if (item.type === 'claudeMd') {
             document.getElementById('claudeInput').value = item.input;
             const outputDiv = document.getElementById('claudeOutput');
@@ -285,6 +522,7 @@ tailwind.config = {
             outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             document.getElementById('promptInput').value = item.input;
+            currentPromptKind = item.type;
             const outputDiv = document.getElementById('promptOutput');
             const label = document.getElementById('outputTypeLabel');
             const labelMap = { skill: 'SKILL.md FILE', standard: 'SYSTEM PROMPT (XML BASED)', advanced: 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)' };
@@ -372,6 +610,7 @@ tailwind.config = {
         }
 
         const btn = document.getElementById('skillBtn');
+        currentPromptKind = 'skill';
         document.getElementById('outputTypeLabel').textContent = 'SKILL.md FILE (ANTHROPIC STANDARD)';
         document.getElementById('outputTypeLabel').className = 'text-xs text-brand-secondary font-bold uppercase tracking-widest';
 
@@ -379,7 +618,7 @@ tailwind.config = {
             const system = `You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.`;
 
             const prompt = `Create a Claude Code Skill (SKILL.md) for the following task:\n${input}`;
-            const result = await sendGenerateRequest({ prompt, systemInstruction: system });
+            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction: system });
 
             if (!result.includes('name:') || !result.includes('description:')) {
                 throw new Error('Generated SKILL.md failed validation. Please simplify the task and try again.');
@@ -401,6 +640,7 @@ tailwind.config = {
         }
 
         const btn = mode === 'advanced' ? document.getElementById('sysPromptBtnAdv') : document.getElementById('sysPromptBtn');
+        currentPromptKind = mode === 'advanced' ? 'advanced' : 'standard';
 
         if (mode === 'advanced') {
             document.getElementById('outputTypeLabel').textContent = 'DEEP THINKING PROMPT (EXTENDED CHAIN OF THOUGHT)';
@@ -419,7 +659,7 @@ tailwind.config = {
                 ? `Create a deep-reasoning, advanced system prompt with extended Chain of Thought for: ${input}`
                 : `Create a system prompt for: ${input}`;
 
-            const result = await sendGenerateRequest({ prompt, systemInstruction: system });
+            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction: system });
             showOutput(outputDiv, result, false);
             const histLabel = mode === 'advanced' ? 'Deep Thinking' : 'System Prompt';
             saveToHistory(mode, histLabel, input, result);
@@ -440,7 +680,7 @@ tailwind.config = {
         await runRequest(btn, outputDiv, async () => {
             const system = `You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions.`;
             const prompt = `Create CLAUDE.md for: ${input}`;
-            const result = await sendGenerateRequest({ prompt, systemInstruction: system });
+            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction: system });
 
             const normalized = result.toLowerCase();
             if (!normalized.includes('mcp') || !normalized.includes('build') || !normalized.includes('skill')) {
@@ -453,7 +693,10 @@ tailwind.config = {
         });
     }
 
-    document.addEventListener('DOMContentLoaded', renderHistory);
+    document.addEventListener('DOMContentLoaded', () => {
+        renderHistory();
+        initSettings();
+    });
 
     async function copyToClipboard(elementId) {
         const text = document.getElementById(elementId).querySelector('pre').textContent;

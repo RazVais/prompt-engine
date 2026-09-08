@@ -6,8 +6,9 @@ or delete them as they land.
 ## Known issues / inconsistencies
 
 - [x] **Model name is set in three places and they disagree.** _(fixed 2026-09-08)_
-  `server.js` default and `.env` now both say `gemini-2.5-flash`; the frontend no
-  longer defines or sends a `model` — `GEMINI_MODEL` is the single source of truth.
+  The stale hardcoded frontend constant was removed. The server owns the default
+  per provider (`GEMINI_MODEL` overrides Gemini's); the frontend now sends an
+  explicit, user-chosen `model` from the settings panel, validated server-side.
 - [x] **`generateClaudeMd` validation is brittle.** _(fixed 2026-09-08)_ The
   `mcp` / `build` / `skill` substring check is now advisory: it `console.warn`s
   and still shows the output instead of throwing. `generateSkill`'s frontmatter
@@ -33,10 +34,23 @@ or delete them as they land.
 
 ## Feature ideas
 
-- [ ] Let the user pick the model / temperature / max tokens from the UI.
-- [ ] Add a "download as file" button (not just copy to clipboard) that names the
-  file correctly (`SKILL.md`, `CLAUDE.md`, `system-prompt.md`).
-- [ ] Stream the Gemini response so long generations show progress.
+- [x] **Multi-provider support.** _(added 2026-09-08)_ `server.js` now proxies
+  Google Gemini, Anthropic Claude, OpenAI, and xAI Grok via a `PROVIDERS`
+  registry (raw `fetch`, no SDKs). `GET /api/providers` reports which are
+  configured (key present) plus each one's model list, temperature range, and
+  token cap. Keys: `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+  `XAI_API_KEY`.
+- [x] **Let the user pick the model / temperature / max tokens from the UI.**
+  _(done 2026-09-08)_ Settings panel in `prompt_eng.html` (provider select,
+  editable model combo, temperature slider, max-tokens field), fed by
+  `/api/providers` and persisted to `localStorage` (`promptEngineSettings`).
+  The temperature control auto-hides for Anthropic (current Claude models reject
+  a `temperature` param). Model field is free-text so newer model IDs work even
+  if not in the dropdown.
+- [x] **Add a "download as file" button.** _(done 2026-09-08)_ Both output panels
+  have a הורד button. Filenames: skill → `SKILL.md`, standard prompt →
+  `system-prompt.md`, CoT prompt → `system-prompt-cot.md`, `CLAUDE.md` → `CLAUDE.md`.
+- [ ] Stream provider responses so long generations show progress.
 - [ ] Export / import history as JSON.
 - [ ] English UI toggle alongside the Hebrew default.
 - [ ] Show token/cost estimate per generation.
