@@ -32,6 +32,53 @@ or delete them as they land.
   files, logs, and `.env.*` (with a `!.env.example` exception); added a committed
   `.env.example` template.
 
+## Next up (added 2026-09-08)
+
+Prioritized. #1–#3 and #9 are the recommended first batch.
+
+### Robustness
+
+- [ ] **1. Abort the upstream call on client disconnect + per-request timeout.**
+  If the browser closes mid-stream, the provider `fetch` keeps running and burns
+  tokens. Wire an `AbortController` to `req.on('close')` in
+  `/api/generate/stream`, and give every provider `fetch` a hard timeout so a
+  hung provider doesn't tie up a slot through the whole 5-retry cycle.
+- [ ] **2. Per-model capability flags.** Anthropic's "no `temperature`" is a
+  hardcoded special case. Make it a general `capabilities` field per model:
+  OpenAI reasoning models (`o*`, `gpt-5*`) also reject `temperature` and need
+  `max_completion_tokens` instead of `max_tokens` — the current code 400s on
+  them. Same mechanism lets the "חשיבה מעמיקה (CoT)" button turn on native
+  extended thinking for Claude / Gemini `thinkingConfig` instead of only
+  changing prompt wording.
+- [ ] **3. Auto-populate model dropdowns from each provider's list-models API**
+  at server start (Gemini, OpenAI, Anthropic `/v1/models`, xAI). Ends dropdown
+  staleness; keep the free-text model field as the escape hatch.
+
+### Product
+
+- [ ] **4. Side-by-side compare** — run one task description against two
+  models/providers and show both outputs next to each other.
+- [ ] **5. Prompt preset library** — a dropdown of starter task descriptions.
+- [ ] **6. Diff view on refine** — highlight what changed between the original
+  and the rewrite.
+- [ ] **7. Stop button** for an in-flight generation + Ctrl/Cmd+Enter to generate.
+- [ ] **8. "Lint an existing SKILL.md / CLAUDE.md" mode** — paste one in, get
+  structured feedback instead of only generating from scratch.
+
+### Infra
+
+- [ ] **9. GitHub Actions CI** — `node -c server.js` + the inline-script parse
+  check (+ tests once they exist) on every PR. Gives the monthly skills-refresh
+  PRs a green check.
+- [ ] **10. `.gitattributes`** with `* text=auto eol=lf` — stops the
+  "LF will be replaced by CRLF" warning on every commit.
+- [ ] **12. SessionStart hook** to auto-run `tools/sync-skills.*` after a
+  `git pull` so merged skills land in `~/.claude/skills/` without a manual step.
+- [ ] **13. Let the monthly routine also propose `PROVIDERS` model-list /
+  `PRICING` updates** in a clearly-labeled section of its PR, not just skills.
+
+(#11 = the two existing open items in "Nice-to-have engineering" below.)
+
 ## Feature ideas
 
 - [x] **Multi-provider support.** _(added 2026-09-08)_ `server.js` now proxies
@@ -81,14 +128,15 @@ or delete them as they land.
 
 ## Nice-to-have engineering
 
-- [ ] Add a minimal test for `/api/generate` (mock `fetch`, assert retry + error
-  codes 400 / 500 / 502 / 429).
+- [ ] Add tests for `/api/generate` and `/api/generate/stream` (mock `fetch`,
+  assert retry + 400 / 429 / 502, SSE `delta`/`done`/`error` framing, and the
+  `usage` / `estCostUsd` shape). Server already exports internals for this.
 - [ ] The rate limiter's `Map` never evicts stale IP buckets — fine for localhost
   but add a periodic sweep (or swap in `express-rate-limit`) before exposing the
   server publicly.
 - [ ] Add a linter (eslint) and a `format` script.
 - [ ] Dockerfile for one-command run.
 - [ ] Split `prompt_eng.html` inline script into a served `app.js` for readability
-  (still no build step needed).
-- [ ] Centralize the four system-instruction templates into one object/module so
-  they are easy to review and version.
+  (still no build step needed) — the file is now large.
+- [~] Centralize the system-instruction templates — partly done: they live in
+  `TRANSLATIONS[lang].tpl.sys.*`. Could still move to a standalone module.
