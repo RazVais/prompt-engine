@@ -225,9 +225,18 @@ tailwind.config = {
                 <span class="text-3xl mr-3">🕓</span>
                 <h2 class="text-2xl font-bold">היסטוריית פרומפטים</h2>
             </div>
-            <button onclick="clearAllHistory()" class="bg-red-900/40 hover:bg-red-800/60 text-red-400 text-xs font-bold px-4 py-2 rounded-xl transition border border-red-800/40">
-                נקה הכל
-            </button>
+            <div class="flex gap-2">
+                <button onclick="exportHistory()" class="bg-brand-primary/10 hover:bg-brand-primary/25 text-brand-primary text-xs font-bold px-4 py-2 rounded-xl transition border border-brand-primary/30">
+                    ייצוא JSON
+                </button>
+                <button onclick="document.getElementById('importHistoryInput').click()" class="bg-slate-700/50 hover:bg-slate-600/60 text-slate-300 text-xs font-bold px-4 py-2 rounded-xl transition border border-slate-600/50">
+                    ייבוא JSON
+                </button>
+                <input type="file" id="importHistoryInput" accept="application/json,.json" class="hidden" onchange="importHistory(event)">
+                <button onclick="clearAllHistory()" class="bg-red-900/40 hover:bg-red-800/60 text-red-400 text-xs font-bold px-4 py-2 rounded-xl transition border border-red-800/40">
+                    נקה הכל
+                </button>
+            </div>
         </div>
         <div id="historyList" class="space-y-3">
             <p id="historyEmpty" class="text-slate-500 text-sm text-center py-6">אין היסטוריה שמורה עדיין.</p>
@@ -543,6 +552,82 @@ tailwind.config = {
         if (!confirm('למחוק את כל ההיסטוריה?')) return;
         localStorage.removeItem(HISTORY_KEY);
         renderHistory();
+    }
+
+    function exportHistory() {
+        const history = loadHistory();
+        if (!history.length) {
+            alert('אין היסטוריה לייצוא');
+            return;
+        }
+        const today = new Date().toISOString().slice(0, 10);
+        downloadText('prompt-engine-history-' + today + '.json', JSON.stringify(history, null, 2));
+    }
+
+    function importHistory(event) {
+        const fileInput = event.target;
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+
+        const finish = (msg) => {
+            if (msg) alert(msg);
+            fileInput.value = '';
+        };
+
+        const reader = new FileReader();
+        reader.onerror = () => finish('קובץ לא תקין');
+        reader.onload = () => {
+            let parsed;
+            try {
+                parsed = JSON.parse(reader.result);
+            } catch (e) {
+                return finish('קובץ לא תקין');
+            }
+
+            if (!Array.isArray(parsed)) {
+                return finish('קובץ לא תקין');
+            }
+
+            let invalid = 0;
+            const valid = [];
+            parsed.forEach(item => {
+                const ok = item && typeof item === 'object' && !Array.isArray(item)
+                    && typeof item.id === 'string'
+                    && typeof item.type === 'string'
+                    && typeof item.input === 'string'
+                    && typeof item.output === 'string';
+                if (ok) valid.push(item);
+                else invalid++;
+            });
+
+            const existing = loadHistory();
+            const seen = new Set(existing.map(h => h.id));
+            let duplicates = 0;
+            const imported = [];
+            valid.forEach(item => {
+                if (seen.has(item.id)) {
+                    duplicates++;
+                } else {
+                    seen.add(item.id);
+                    imported.push(item);
+                }
+            });
+
+            let merged = imported.concat(existing);
+            merged.sort((a, b) => {
+                const ta = a.timestamp || '', tb = b.timestamp || '';
+                if (ta !== tb) return ta < tb ? 1 : -1;
+                const ia = a.id || '', ib = b.id || '';
+                return ia < ib ? 1 : (ia > ib ? -1 : 0);
+            });
+            if (merged.length > 50) merged = merged.slice(0, 50);
+
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+            renderHistory();
+
+            finish('יובאו ' + imported.length + ' רשומות, דילוג על ' + duplicates + ' כפילויות, ' + invalid + ' רשומות לא תקינות');
+        };
+        reader.readAsText(file);
     }
 
     function setAllControlsDisabled(isDisabled) {
