@@ -69,6 +69,33 @@ function openAiCompatible({ id, label, url, models, defaultModel, maxTokens }) {
       return json && json.choices && json.choices[0] && json.choices[0].message
         ? json.choices[0].message.content
         : undefined;
+    },
+    buildStreamRequest(opts) {
+      const base = this.buildRequest(opts);
+      return {
+        url: base.url,
+        headers: base.headers,
+        body: { ...base.body, stream: true, stream_options: { include_usage: true } }
+      };
+    },
+    // One parsed SSE `data:` object -> text delta (or null).
+    extractStreamDelta(json) {
+      return json &&
+        json.choices &&
+        json.choices[0] &&
+        json.choices[0].delta &&
+        typeof json.choices[0].delta.content === 'string'
+        ? json.choices[0].delta.content
+        : null;
+    },
+    // Final usage-only chunk -> {inputTokens, outputTokens} (or null).
+    extractStreamUsage(json) {
+      const u = json && json.usage;
+      if (!u) return null;
+      const out = {};
+      if (typeof u.prompt_tokens === 'number') out.inputTokens = u.prompt_tokens;
+      if (typeof u.completion_tokens === 'number') out.outputTokens = u.completion_tokens;
+      return Object.keys(out).length ? out : null;
     }
   };
 }
@@ -111,6 +138,32 @@ const PROVIDERS = {
         json.candidates[0].content.parts[0]
         ? json.candidates[0].content.parts[0].text
         : undefined;
+    },
+    buildStreamRequest(opts) {
+      const base = this.buildRequest(opts);
+      return {
+        url: `https://generativelanguage.googleapis.com/v1beta/models/${opts.model}:streamGenerateContent?alt=sse&key=${keyFor('gemini')}`,
+        headers: base.headers,
+        body: base.body
+      };
+    },
+    extractStreamDelta(json) {
+      const part =
+        json &&
+        json.candidates &&
+        json.candidates[0] &&
+        json.candidates[0].content &&
+        json.candidates[0].content.parts &&
+        json.candidates[0].content.parts[0];
+      return part && typeof part.text === 'string' ? part.text : null;
+    },
+    extractStreamUsage(json) {
+      const u = json && json.usageMetadata;
+      if (!u) return null;
+      const out = {};
+      if (typeof u.promptTokenCount === 'number') out.inputTokens = u.promptTokenCount;
+      if (typeof u.candidatesTokenCount === 'number') out.outputTokens = u.candidatesTokenCount;
+      return Object.keys(out).length ? out : null;
     }
   },
 
@@ -144,6 +197,49 @@ const PROVIDERS = {
         .filter((b) => b && b.type === 'text')
         .map((b) => b.text)
         .join('');
+    },
+    buildStreamRequest(opts) {
+      const base = this.buildRequest(opts);
+      return {
+        url: base.url,
+        headers: base.headers,
+        body: { ...base.body, stream: true }
+      };
+    },
+    extractStreamDelta(json) {
+      return json &&
+        json.type === 'content_block_delta' &&
+        json.delta &&
+        json.delta.type === 'text_delta' &&
+        typeof json.delta.text === 'string'
+        ? json.delta.text
+        : null;
+    },
+    // Anthropic reports usage in two pieces: input_tokens on `message_start`
+    // and the running output_tokens on `message_delta`. Return whichever piece
+    // this chunk carries; streamProvider() accumulates them.
+    extractStreamUsage(json) {
+      if (
+        json &&
+        json.type === 'message_start' &&
+        json.message &&
+        json.message.usage
+      ) {
+        const u = json.message.usage;
+        const out = {};
+        if (typeof u.input_tokens === 'number') out.inputTokens = u.input_tokens;
+        if (typeof u.output_tokens === 'number') out.outputTokens = u.output_tokens;
+        return Object.keys(out).length ? out : null;
+      }
+      if (
+        json &&
+        json.type === 'message_delta' &&
+        json.usage &&
+        typeof json.usage.output_tokens === 'number'
+      ) {
+        return { outputTokens: json.usage.output_tokens };
+      }
+      return null;
     }
   },
 
@@ -265,6 +361,91 @@ async function callProvider(id, opts) {
   return text;
 }
 
+// Streaming counterpart of callProvider. Opens a raw streaming request to the
+// provider, parses the SSE body, and invokes onDelta(textChunk) for each chunk.
+// Resolves to { usage } where usage is {inputTokens, outputTokens} or null when
+// the provider reported none. Like callProvider, never logs or embeds the
+// request URL or API key (Gemini's key travels in the URL) in a thrown error.
+async function streamProvider(id, opts, onDelta) {
+  const provider = PROVIDERS[id];
+  const { url, headers, body } = provider.buildStreamRequest(opts);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    let json = null;
+    try {
+      json = await response.json();
+    } catch (_) {
+      json = null;
+    }
+    const detail = json && json.error !== undefined ? json.error : json;
+    throw new Error(
+      `${provider.label} returned ${response.status}: ${JSON.stringify(detail).slice(0, 500)}`
+    );
+  }
+  if (!response.body) {
+    throw new Error(`${provider.label} returned an empty response stream.`);
+  }
+
+  let usage = null;
+  const mergeUsage = (partial) => {
+    if (!partial) return;
+    usage = usage || {};
+    if (typeof partial.inputTokens === 'number') usage.inputTokens = partial.inputTokens;
+    if (typeof partial.outputTokens === 'number') usage.outputTokens = partial.outputTokens;
+  };
+
+  const handleLine = (rawLine) => {
+    const line = rawLine.replace(/\r$/, '');
+    if (!line || line.startsWith(':') || line.startsWith('event:')) return;
+    if (!line.startsWith('data:')) return;
+    const payload = line.slice(5).replace(/^ /, '');
+    if (!payload || payload === '[DONE]') return;
+
+    let json;
+    try {
+      json = JSON.parse(payload);
+    } catch (_) {
+      return;
+    }
+
+    // Surface a provider error object embedded in the stream.
+    if (json && json.error) {
+      const detail = typeof json.error === 'string' ? json.error : JSON.stringify(json.error).slice(0, 500);
+      throw new Error(`${provider.label} stream error: ${detail}`);
+    }
+
+    const delta = provider.extractStreamDelta(json);
+    if (typeof delta === 'string' && delta.length > 0) {
+      onDelta(delta);
+    }
+    mergeUsage(provider.extractStreamUsage(json));
+  };
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for await (const chunk of response.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf('\n')) !== -1) {
+      const rawLine = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 1);
+      handleLine(rawLine);
+    }
+  }
+  buffer += decoder.decode();
+  if (buffer) handleLine(buffer);
+
+  const hasUsage =
+    usage && (typeof usage.inputTokens === 'number' || typeof usage.outputTokens === 'number');
+  return { usage: hasUsage ? usage : null };
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -341,6 +522,111 @@ app.post('/api/generate', rateLimit, async (req, res) => {
   }
 });
 
+// Parse + validate + clamp a /api/generate-shaped body. Returns
+// { error, status } on failure or { providerId, provider, opts } on success.
+function prepareGenerateRequest(reqBody) {
+  const body = reqBody || {};
+  const { prompt, systemInstruction } = body;
+
+  if (
+    typeof prompt !== 'string' ||
+    !prompt.trim() ||
+    typeof systemInstruction !== 'string' ||
+    !systemInstruction.trim()
+  ) {
+    return { error: 'Missing prompt or systemInstruction in request body.', status: 400 };
+  }
+
+  const providerId = body.provider || DEFAULT_PROVIDER;
+  const provider = PROVIDERS[providerId];
+  if (!provider) {
+    return { error: `Unknown provider: ${providerId}`, status: 400 };
+  }
+  if (!isConfigured(providerId)) {
+    return { error: `Provider ${providerId} is not configured (missing API key).`, status: 400 };
+  }
+
+  const model = body.model || provider.defaultModel;
+  if (!MODEL_NAME_RE.test(model)) {
+    return { error: 'Invalid model name.', status: 400 };
+  }
+
+  const temperature = resolveTemperature(provider, body.temperature);
+  const maxTokens = resolveMaxTokens(provider, body.maxTokens);
+
+  return {
+    providerId,
+    provider,
+    opts: { model, system: systemInstruction, prompt, temperature, maxTokens }
+  };
+}
+
+// Streaming variant of /api/generate. Same body, validation and clamping;
+// responds with Server-Sent Events:
+//   data: {"delta":"<text>"}\n\n            per chunk
+//   data: {"done":true,"usage":{...}}\n\n   terminal (usage omitted if unknown)
+//   data: {"error":"<msg>","status":502}\n\n on failure
+app.post('/api/generate/stream', rateLimit, async (req, res) => {
+  const prepared = prepareGenerateRequest(req.body);
+  if (prepared.error) {
+    return res.status(prepared.status).json({ error: prepared.error });
+  }
+  const { providerId, provider, opts } = prepared;
+
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+  let delivered = false;
+  const onDelta = (text) => {
+    delivered = true;
+    send({ delta: text });
+  };
+
+  let attempt = 0;
+  let delay = 1000;
+  while (attempt < 5) {
+    try {
+      const { usage } = await streamProvider(providerId, opts, onDelta);
+      const terminal = { done: true };
+      if (usage) {
+        terminal.usage = {
+          inputTokens: Number(usage.inputTokens) || 0,
+          outputTokens: Number(usage.outputTokens) || 0
+        };
+      }
+      send(terminal);
+      return res.end();
+    } catch (error) {
+      // Once any bytes have been streamed we cannot retry — the client has
+      // already rendered a partial response.
+      if (delivered) {
+        console.error(`${provider.label} streaming failed mid-stream:`, error.message);
+        send({ error: error.message, status: 502 });
+        return res.end();
+      }
+      attempt += 1;
+      if (attempt >= 5) {
+        console.error(
+          `${provider.label} streaming failed after ${attempt} attempts:`,
+          error.message
+        );
+        send({ error: `Failed to generate content from ${provider.label}.`, status: 502 });
+        return res.end();
+      }
+      console.warn(`Stream attempt ${attempt} failed, retrying in ${delay}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2;
+    }
+  }
+});
+
 if (require.main === module) {
   app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
@@ -356,5 +642,7 @@ module.exports = {
   isConfigured,
   resolveTemperature,
   resolveMaxTokens,
-  callProvider
+  callProvider,
+  streamProvider,
+  prepareGenerateRequest
 };

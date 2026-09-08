@@ -691,7 +691,7 @@ tailwind.config = {
         await runRequest(btn, outputDiv, async () => {
             const systemInstruction = `You are editing an existing document. Apply ONLY the change the user requests and return the COMPLETE updated document with no commentary, no code fences, and no preamble. Preserve everything else exactly — structure, formatting, language.`;
             const prompt = currentDoc + `\n\n---\nשינוי מבוקש: ` + instruction;
-            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction });
+            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction }, outputDiv);
             showOutput(outputDiv, result, false);
             saveToHistory(kind, baseLabel + ' (שוכתב)', '↻ ' + instruction, result);
             inputEl.value = '';
@@ -710,6 +710,85 @@ tailwind.config = {
             throw new Error(result.error || `Server returned ${response.status}`);
         }
         return result.text;
+    }
+
+    // Streams /api/generate/stream. Calls onDelta(fullTextSoFar) for each chunk.
+    // Resolves { text, usage } — usage is { inputTokens, outputTokens } or null.
+    // Throws on transport failure, non-ok response, or a streamed { error }.
+    async function sendGenerateRequestStream(payload, onDelta) {
+        const res = await fetch('/api/generate/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok || !res.body) {
+            let msg = `Server returned ${res.status}`;
+            try {
+                const j = await res.json();
+                if (j && j.error) msg = j.error;
+            } catch (e) {}
+            throw new Error(msg);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullText = '';
+        let usage = null;
+        let done = false;
+
+        const handleLine = (rawLine) => {
+            const line = rawLine.replace(/\r$/, '');
+            if (!line.startsWith('data:')) return;
+            const chunk = line.slice(5).trim();
+            if (!chunk) return;
+            let obj;
+            try { obj = JSON.parse(chunk); } catch (e) { return; }
+            if (typeof obj.delta === 'string') {
+                fullText += obj.delta;
+                onDelta(fullText);
+            } else if (obj.error) {
+                throw new Error(obj.error);
+            } else if (obj.done) {
+                usage = obj.usage || null;
+                done = true;
+            }
+        };
+
+        while (true) {
+            const { value, done: streamDone } = await reader.read();
+            if (value) {
+                buffer += decoder.decode(value, { stream: true });
+                let idx;
+                while ((idx = buffer.indexOf('\n')) !== -1) {
+                    const rawLine = buffer.slice(0, idx);
+                    buffer = buffer.slice(idx + 1);
+                    handleLine(rawLine);
+                }
+            }
+            if (streamDone) break;
+        }
+        buffer += decoder.decode();
+        if (buffer) handleLine(buffer);
+
+        if (!done) throw new Error('Stream ended unexpectedly.');
+        return { text: fullText, usage };
+    }
+
+    // Streams into outputDiv's <pre> as text arrives; on any streaming failure
+    // falls back once to the non-stream endpoint. Returns { text, usage }.
+    async function generateInto(payload, outputDiv) {
+        outputDiv.classList.remove('hidden');
+        try {
+            return await sendGenerateRequestStream(payload, (soFar) => {
+                showOutput(outputDiv, soFar, false);
+            });
+        } catch (streamErr) {
+            console.warn('Streaming failed, falling back to /api/generate:', streamErr);
+            const text = await sendGenerateRequest(payload);
+            return { text, usage: null };
+        }
     }
 
     async function runRequest(btn, outputDiv, callback) {
@@ -747,7 +826,7 @@ tailwind.config = {
             const system = `You are an expert Anthropic Claude Code plugin developer.\nThe user will describe a workflow or task. You must generate a valid SKILL.md file that adheres to Anthropic's guidelines.\n\nRequired Structure for SKILL.md:\n1. YAML Frontmatter: Must include 'name' and 'description'.\n2. Objective/About: Brief explanation of the skill.\n3. Required MCP Servers: Explicitly list any MCP servers needed.\n4. Workflow/Instructions: Use IMPERATIVE writing style.\n5. XML Tags: Use <thinking>, <validation>, and <output_format> tags.\n\nGenerate ONLY markdown content ready to be saved as SKILL.md.`;
 
             const prompt = `Create a Claude Code Skill (SKILL.md) for the following task:\n${input}`;
-            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction: system });
+            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
 
             if (!result.includes('name:') || !result.includes('description:')) {
                 throw new Error('Generated SKILL.md failed validation. Please simplify the task and try again.');
@@ -788,7 +867,7 @@ tailwind.config = {
                 ? `Create a deep-reasoning, advanced system prompt with extended Chain of Thought for: ${input}`
                 : `Create a system prompt for: ${input}`;
 
-            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction: system });
+            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
             showOutput(outputDiv, result, false);
             const histLabel = mode === 'advanced' ? 'Deep Thinking' : 'System Prompt';
             saveToHistory(mode, histLabel, input, result);
@@ -809,7 +888,7 @@ tailwind.config = {
         await runRequest(btn, outputDiv, async () => {
             const system = `You are an expert in Claude Code environment configuration. Create a CLAUDE.md file based on the user's tech stack and rules. CRITICAL: include a section recommending specific MCP servers, a section referencing loading custom skills, standard Build/Lint/Test commands, and coding conventions.`;
             const prompt = `Create CLAUDE.md for: ${input}`;
-            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction: system });
+            const { text: result } = await generateInto({ ...getGenerationSettings(), prompt, systemInstruction: system }, outputDiv);
 
             const normalized = result.toLowerCase();
             if (!normalized.includes('mcp') || !normalized.includes('build') || !normalized.includes('skill')) {
