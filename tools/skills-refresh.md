@@ -5,6 +5,15 @@ techniques from the four major LLM providers. This runs once a month as a
 scheduled cloud agent. Work only inside `.claude/skills/` and open a PR — never
 merge, never touch anything else.
 
+## 0. Environment notes
+
+- `WebFetch` egress is restricted in the cloud sandbox — several doc domains
+  (`ai.google.dev`, `docs.x.ai`, `developers.openai.com`, aggregators) are
+  blocked. Lean on `WebSearch`; `platform.claude.com` is reachable via `WebFetch`.
+- Do **not** subscribe to PR activity, schedule follow-up check-ins, or send push
+  notifications. Open the PR and end the run — the maintainer reviews on their own
+  schedule.
+
 ## 1. Research — last ~6 weeks only
 
 Use web search. Cover all four providers:

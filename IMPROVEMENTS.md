@@ -54,13 +54,30 @@ or delete them as they land.
   is the brief for a scheduled cloud routine that researches recent Anthropic /
   OpenAI / xAI / Google changes, writes `SKILL.md` files under `.claude/skills/`,
   and opens a review PR. `tools/sync-skills.*` pushes merged skills to
-  `~/.claude/skills/`. Still to do: actually create the routine via `/schedule`,
-  and consider a SessionStart hook that runs the sync automatically.
-- [ ] Stream provider responses so long generations show progress.
-- [ ] Export / import history as JSON.
-- [ ] English UI toggle alongside the Hebrew default.
-- [ ] Show token/cost estimate per generation.
-- [ ] A "refine" step: feed the generated artifact back with an edit instruction.
+  `~/.claude/skills/`. Routine created (`trig_016jRAyGht5qWkTsh3ZG1hQe`, monthly);
+  first test run opened PR #1. Still to do: consider a SessionStart hook that runs
+  the sync automatically.
+- [x] **Stream provider responses.** _(done 2026-09-08)_ `POST /api/generate/stream`
+  (SSE) proxies streaming from all four providers, forwarding `{delta}` events and
+  a terminal `{done,usage}`. Frontend renders text as it arrives via
+  `sendGenerateRequestStream` / `generateInto`, with a one-shot fallback to the
+  non-stream endpoint on any error. Non-stream `/api/generate` kept as-is.
+- [x] **Export / import history as JSON.** _(done 2026-09-08)_ Buttons in the
+  history header. Import merges by `id` (dedupe, re-sort, 50-cap) and reports
+  imported / duplicate / invalid counts.
+- [x] **English / Hebrew UI toggle.** _(done 2026-09-08)_ ~66 keys in a
+  `TRANSLATIONS` table with a `t()` helper and `data-i18n*` markup; header button
+  flips language + text direction and persists to `localStorage.promptEngineLang`.
+  The four generator system-prompt templates follow the UI language for their
+  output-language instruction only.
+- [x] **Token / cost estimate per generation.** _(done 2026-09-08)_ Both generate
+  paths return `usage: {inputTokens, outputTokens, estCostUsd}`; cost from an
+  approximate per-model `PRICING` table in `server.js` (prefix fallback; `null`
+  when unpriced). Shown as a muted line under each output panel and in history.
+- [x] **Refine step.** _(done 2026-09-08)_ Each output panel has an inline
+  "describe a change" input that re-sends the current document with an edit
+  instruction and replaces it with the rewrite; saved to history with a
+  "(שוכתב)" / "(rewritten)" label.
 
 ## Nice-to-have engineering
 

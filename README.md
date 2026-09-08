@@ -65,6 +65,10 @@ is not reachable from the browser.
 
 ## How to use
 
+The UI is Hebrew by default; the button in the top corner (**EN** / **עברית**)
+switches the whole interface and text direction to English and back, remembered
+across reloads.
+
 1. In **הגדרות יצירה** (Generation settings) at the top, pick the provider, model,
    temperature, and max tokens. Only providers with a configured key are
    selectable; the model box accepts any model ID (not just the suggestions).
@@ -72,21 +76,24 @@ is not reachable from the browser.
    take one). Your choices are remembered in the browser.
 2. Type a description of your task in the main box (e.g. "build a weekly triathlon
    training plan from heart-rate data in Excel files").
-3. Click one of:
-   - **צור קובץ SKILL.md** – generate a skill file
-   - **פרומפט סוכן רגיל** – generate a standard agent system prompt
-   - **חשיבה מעמיקה (CoT)** – generate a deep-reasoning system prompt
+3. Click one of the generator buttons — SKILL.md, standard agent prompt, or
+   deep-reasoning (CoT) prompt. Output **streams in** as it is generated, with a
+   token count and rough cost estimate shown underneath.
 4. For a project config file, use the smaller **CLAUDE.md** box on the right.
-5. Use **העתק הכל** to copy or **הורד** to download the result as a correctly named
-   file (`SKILL.md`, `system-prompt.md`, `system-prompt-cot.md`, `CLAUDE.md`).
-6. Every result is saved to browser history (last 50). Use **שחזר** to restore one,
-   or **נקה הכל** to wipe history. History lives only in your browser.
+5. Use **העתק הכל** / Copy, or **הורד** / Download to save the result as a
+   correctly named file (`SKILL.md`, `system-prompt.md`, `system-prompt-cot.md`,
+   `CLAUDE.md`).
+6. To iterate, type a change in the **תאר שינוי** / describe-a-change box under the
+   output and hit **↻ שכתב** / Refine — it rewrites the document with that change.
+7. Every result is saved to browser history (last 50). **שחזר** restores one,
+   **ייצוא / ייבוא JSON** export/import the history, **נקה הכל** wipes it. History
+   lives only in your browser.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `server.js` | Express server: serves `public/`, exposes `GET /api/providers`, proxies `POST /api/generate` to the chosen provider (Gemini / Claude / OpenAI / Grok), rate-limits it |
+| `server.js` | Express server: serves `public/`, `GET /api/providers`, `POST /api/generate` and `POST /api/generate/stream` (SSE) to the chosen provider (Gemini / Claude / OpenAI / Grok), token/cost estimate, rate limiter |
 | `public/prompt_eng.html` | The generator app (UI + all logic, single file) |
 | `public/ai_agents_expert_cheat_sheet.html` | Standalone reference page, not connected to the server |
 | `CLAUDE.md` | Guidance for Claude Code working in this repo |
