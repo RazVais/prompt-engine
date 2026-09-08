@@ -191,6 +191,10 @@ tailwind.config = {
                     </div>
                 </div>
                 <pre class="whitespace-pre-wrap text-slate-300"></pre>
+                <div class="refine-bar hidden mt-4 pt-3 border-t border-slate-700 flex gap-2 items-center">
+                    <input id="promptRefineInput" type="text" placeholder="תאר שינוי לביצוע…" class="ai-input rounded-lg p-2 flex-1 text-xs" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('promptOutput');}">
+                    <button id="promptRefineBtn" onclick="refinePanel('promptOutput')" class="bg-brand-primary/20 text-brand-primary text-xs px-3 py-1 rounded-lg hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
+                </div>
             </div>
         </div>
     </section>
@@ -212,6 +216,10 @@ tailwind.config = {
                 <button onclick="downloadPanel('claudeOutput')" class="bg-slate-800 text-white text-[10px] px-2 py-1 rounded">הורד</button>
             </div>
             <pre class="whitespace-pre-wrap text-green-400"></pre>
+            <div class="refine-bar hidden mt-3 pt-2 border-t border-slate-700 flex gap-2 items-center">
+                <input id="claudeRefineInput" type="text" placeholder="תאר שינוי לביצוע…" class="ai-input rounded p-1.5 flex-1 text-[10px]" onkeydown="if(event.key==='Enter'){event.preventDefault();refinePanel('claudeOutput');}">
+                <button id="claudeRefineBtn" onclick="refinePanel('claudeOutput')" class="bg-brand-primary/20 text-brand-primary text-[10px] px-2 py-1 rounded hover:bg-brand-primary/40 transition whitespace-nowrap">↻ שכתב</button>
+            </div>
         </div>
     </section>
 
@@ -528,6 +536,7 @@ tailwind.config = {
             const outputDiv = document.getElementById('claudeOutput');
             outputDiv.querySelector('pre').textContent = item.output;
             outputDiv.classList.remove('hidden');
+            showRefineBar(outputDiv);
             outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             document.getElementById('promptInput').value = item.input;
@@ -538,6 +547,7 @@ tailwind.config = {
             label.textContent = labelMap[item.type] || item.label;
             outputDiv.querySelector('pre').textContent = item.output;
             outputDiv.classList.remove('hidden');
+            showRefineBar(outputDiv);
             outputDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
@@ -635,6 +645,8 @@ tailwind.config = {
         document.getElementById('sysPromptBtn').disabled = isDisabled;
         document.getElementById('sysPromptBtnAdv').disabled = isDisabled;
         document.getElementById('claudeBtn').disabled = isDisabled;
+        document.getElementById('promptRefineBtn').disabled = isDisabled;
+        document.getElementById('claudeRefineBtn').disabled = isDisabled;
     }
 
     function sanitizePrompt(text) {
@@ -647,11 +659,43 @@ tailwind.config = {
         return null;
     }
 
+    function showRefineBar(outputDiv) {
+        const bar = outputDiv.querySelector('.refine-bar');
+        if (bar) bar.classList.remove('hidden');
+    }
+
     function showOutput(outputDiv, message, isError = false) {
         const outputPre = outputDiv.querySelector('pre');
         outputPre.textContent = message;
         outputPre.classList.toggle('text-red-400', isError);
         outputDiv.classList.remove('hidden');
+        if (!isError) showRefineBar(outputDiv);
+    }
+
+    async function refinePanel(elementId) {
+        const outputDiv = document.getElementById(elementId);
+        const pre = outputDiv.querySelector('pre');
+        const currentDoc = pre ? pre.textContent : '';
+        if (!currentDoc || !currentDoc.trim()) return;
+
+        const isClaude = elementId === 'claudeOutput';
+        const inputEl = document.getElementById(isClaude ? 'claudeRefineInput' : 'promptRefineInput');
+        const btn = document.getElementById(isClaude ? 'claudeRefineBtn' : 'promptRefineBtn');
+        const instruction = inputEl.value.trim();
+        if (!instruction) return;
+
+        const kind = isClaude ? 'claudeMd' : currentPromptKind;
+        const labelMap = { skill: 'SKILL.md', standard: 'System Prompt', advanced: 'Deep Thinking', claudeMd: 'CLAUDE.md' };
+        const baseLabel = labelMap[kind] || 'OUTPUT';
+
+        await runRequest(btn, outputDiv, async () => {
+            const systemInstruction = `You are editing an existing document. Apply ONLY the change the user requests and return the COMPLETE updated document with no commentary, no code fences, and no preamble. Preserve everything else exactly — structure, formatting, language.`;
+            const prompt = currentDoc + `\n\n---\nשינוי מבוקש: ` + instruction;
+            const result = await sendGenerateRequest({ ...getGenerationSettings(), prompt, systemInstruction });
+            showOutput(outputDiv, result, false);
+            saveToHistory(kind, baseLabel + ' (שוכתב)', '↻ ' + instruction, result);
+            inputEl.value = '';
+        });
     }
 
     async function sendGenerateRequest(payload) {
